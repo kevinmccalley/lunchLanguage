@@ -46,7 +46,7 @@ export const IngredientShelf = ({ onAdd, plateRef }: Props) => {
       <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#888', letterSpacing: 0.5 }}>
         {t.kitchen.addHint}
       </p>
-      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, paddingTop: 16 }}>
         {ingredients.map((ing, i) => {
           const translatedName = t.ingredients[ing.id] ?? ing.name;
           return (

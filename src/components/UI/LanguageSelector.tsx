@@ -40,7 +40,7 @@ export const LanguageSelector = () => {
   }, []);
 
   return (
-    <div ref={ref} style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000 }}>
+    <div ref={ref} style={{ position: 'fixed', top: 12, left: 12, zIndex: 1000 }}>
       {/* Trigger button */}
       <motion.button
         onClick={() => setOpen(v => !v)}
@@ -92,7 +92,7 @@ export const LanguageSelector = () => {
             style={{
               position: 'absolute',
               top: 'calc(100% + 6px)',
-              right: 0,
+              left: 0,
               background: 'white',
               borderRadius: 14,
               boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
