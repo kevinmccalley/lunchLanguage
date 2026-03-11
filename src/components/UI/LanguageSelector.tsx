@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactCountryFlag from 'react-country-flag';
 import { useLanguageStore } from '../../store/languageStore';
 import { LANGUAGE_OPTIONS } from '../../i18n/translations';
+import { useT } from '../../i18n/useT';
 import type { Language } from '../../i18n/types';
 
 // Human-readable region label so Portugal and Brazil are distinguishable
@@ -21,7 +22,8 @@ const Flag = ({ countryCode, size = 28 }: { countryCode: string; size?: number }
 );
 
 export const LanguageSelector = () => {
-  const { language, setLanguage } = useLanguageStore();
+  const { language, setLanguage, setShowSetup } = useLanguageStore();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -99,6 +101,25 @@ export const LanguageSelector = () => {
               minWidth: 190,
             }}
           >
+            {/* Learning settings button */}
+            <motion.button
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => { setShowSetup(true); setOpen(false); }}
+              whileHover={{ background: '#f0f3ff' }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                width: '100%', padding: '9px 14px',
+                border: 'none', borderBottom: '2px solid #e8e8e8',
+                background: 'transparent', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+                color: '#667eea', textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: 18 }}>🎓</span>
+              <span>{t.setup.title}</span>
+            </motion.button>
+
             {LANGUAGE_OPTIONS.map((opt, i) => {
               const isSelected = opt.code === language;
               const region = REGION_LABEL[opt.code];

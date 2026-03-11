@@ -1,26 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactCountryFlag from 'react-country-flag';
 import { useLanguageStore } from '../../store/languageStore';
-import { LANGUAGE_OPTIONS } from '../../i18n/translations';
-import { TRANSLATIONS } from '../../i18n/translations';
+import { LANGUAGE_OPTIONS, TRANSLATIONS } from '../../i18n/translations';
 import type { Language } from '../../i18n/types';
 
 export const LanguageSetup = () => {
   const {
+    language,
+    learningLanguage,
+    speechEnabled,
     hasCompletedSetup,
+    showSetup,
     setLanguage,
     setLearningLanguage,
     setSpeechEnabled,
     setHasCompletedSetup,
+    setShowSetup,
   } = useLanguageStore();
 
-  const [step, setStep] = useState<1 | 2>(1);
-  const [nativeLang, setNativeLang] = useState<Language>('en');
-  const [learningLang, setLearningLang] = useState<Language | null>(null);
-  const [speechOn, setSpeechOn] = useState(true);
+  const isOpen = !hasCompletedSetup || showSetup;
 
-  if (hasCompletedSetup) return null;
+  const [step, setStep] = useState<1 | 2>(1);
+  const [nativeLang, setNativeLang] = useState<Language>(language);
+  const [learningLang, setLearningLang] = useState<Language | null>(learningLanguage);
+  const [speechOn, setSpeechOn] = useState(speechEnabled);
+
+  // Sync local state whenever the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setNativeLang(language);
+      setLearningLang(learningLanguage);
+      setSpeechOn(speechEnabled);
+      setStep(1);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const nativeT = TRANSLATIONS[nativeLang];
   const learningOptions = LANGUAGE_OPTIONS.filter(o => o.code !== nativeLang);
@@ -30,12 +46,16 @@ export const LanguageSetup = () => {
     setLearningLanguage(learningLang);
     setSpeechEnabled(speechOn);
     setHasCompletedSetup(true);
+    setShowSetup(false);
   };
+
+  const handleClose = () => setShowSetup(false);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9000,
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -50,8 +70,25 @@ export const LanguageSetup = () => {
         style={{
           background: 'white', borderRadius: 24, padding: '32px 28px',
           maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          position: 'relative',
         }}
       >
+        {/* Close button — only shown when re-opening from within the app */}
+        {hasCompletedSetup && (
+          <button
+            onClick={handleClose}
+            style={{
+              position: 'absolute', top: 16, right: 16,
+              background: '#f0f0f0', border: 'none', borderRadius: '50%',
+              width: 32, height: 32, cursor: 'pointer', fontSize: 16,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#666', fontWeight: 700,
+            }}
+          >
+            ✕
+          </button>
+        )}
+
         {/* Step indicators */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
           {[1, 2].map(s => (
@@ -95,21 +132,17 @@ export const LanguageSetup = () => {
                     }}
                   >
                     <ReactCountryFlag
-                      countryCode={opt.countryCode}
-                      svg
+                      countryCode={opt.countryCode} svg
                       style={{ width: 24, height: 16, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
                     />
-                    <span>{opt.label}</span>
-                    {nativeLang === opt.code && (
-                      <span style={{ marginLeft: 'auto', color: '#667eea' }}>✓</span>
-                    )}
+                    <span style={{ flex: 1, textAlign: 'left' }}>{opt.label}</span>
+                    {nativeLang === opt.code && <span style={{ color: '#667eea' }}>✓</span>}
                   </button>
                 ))}
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setStep(2)}
                 style={{
                   marginTop: 22, width: '100%', padding: '13px 0',
@@ -138,7 +171,7 @@ export const LanguageSetup = () => {
                 {nativeT.setup.learningPrompt}
               </p>
 
-              {/* Skip option */}
+              {/* Skip / no second language */}
               <button
                 onClick={() => setLearningLang(null)}
                 style={{
@@ -152,8 +185,8 @@ export const LanguageSetup = () => {
                 }}
               >
                 <span style={{ fontSize: 20 }}>🚫</span>
-                <span>{nativeT.setup.skipLearning}</span>
-                {learningLang === null && <span style={{ marginLeft: 'auto', color: '#ff6b35' }}>✓</span>}
+                <span style={{ flex: 1, textAlign: 'left' }}>{nativeT.setup.skipLearning}</span>
+                {learningLang === null && <span style={{ color: '#ff6b35' }}>✓</span>}
               </button>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -172,14 +205,11 @@ export const LanguageSetup = () => {
                     }}
                   >
                     <ReactCountryFlag
-                      countryCode={opt.countryCode}
-                      svg
+                      countryCode={opt.countryCode} svg
                       style={{ width: 24, height: 16, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
                     />
-                    <span>{opt.label}</span>
-                    {learningLang === opt.code && (
-                      <span style={{ marginLeft: 'auto', color: '#ff6b35' }}>✓</span>
-                    )}
+                    <span style={{ flex: 1, textAlign: 'left' }}>{opt.label}</span>
+                    {learningLang === opt.code && <span style={{ color: '#ff6b35' }}>✓</span>}
                   </button>
                 ))}
               </div>
@@ -198,7 +228,7 @@ export const LanguageSetup = () => {
                     width: 48, height: 26, borderRadius: 13,
                     background: speechOn ? '#667eea' : '#ccc',
                     border: 'none', cursor: 'pointer', position: 'relative',
-                    transition: 'background 0.2s',
+                    transition: 'background 0.2s', flexShrink: 0,
                   }}
                 >
                   <div style={{
@@ -213,8 +243,7 @@ export const LanguageSetup = () => {
 
               <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setStep(1)}
                   style={{
                     flex: 1, padding: '13px 0',
@@ -223,11 +252,10 @@ export const LanguageSetup = () => {
                     fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
-                  ← Back
+                  ← {nativeT.kitchen?.back ?? 'Back'}
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={confirmSetup}
                   style={{
                     flex: 2, padding: '13px 0',

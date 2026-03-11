@@ -2,6 +2,9 @@ import { motion, useMotionValue } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { getIngredientById } from '../../data/ingredients';
 import { useGameStore } from '../../store/gameStore';
+import { useLanguageStore } from '../../store/languageStore';
+import { TRANSLATIONS } from '../../i18n/translations';
+import { useT } from '../../i18n/useT';
 import type { PlacedIngredient } from '../../types';
 
 interface Props {
@@ -11,8 +14,17 @@ interface Props {
 
 export const DraggableIngredient = ({ item, containerRef }: Props) => {
   const { moveIngredient, removeIngredient } = useGameStore();
+  const { learningLanguage } = useLanguageStore();
+  const t = useT();
   const ingredient = getIngredientById(item.ingredientId);
   const [dragging, setDragging] = useState(false);
+
+  const nativeName = ingredient ? (t.ingredients[ingredient.id] ?? ingredient.name) : '';
+  const learningWord = learningLanguage && ingredient
+    ? TRANSLATIONS[learningLanguage].ingredients[ingredient.id]
+    : null;
+  // Only show label if it differs from the native word
+  const showLabel = learningWord && learningWord !== nativeName;
 
   // Use motion values for position — avoids transform/left+top stacking bug
   const x = useMotionValue(item.x);
@@ -70,19 +82,40 @@ export const DraggableIngredient = ({ item, containerRef }: Props) => {
       whileDrag={{ scale: 1.25, zIndex: 200 }}
       onDoubleClick={() => removeIngredient(item.instanceId)}
     >
-      <div
-        style={{
-          width: size,
-          height: size,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          filter: dragging ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.3))' : 'none',
-        }}
-      >
-        <span style={{ fontSize: size, lineHeight: 1, display: 'block' }}>
-          {ingredient.emoji}
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <div
+          style={{
+            width: size,
+            height: size,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            filter: dragging ? 'drop-shadow(0 6px 12px rgba(0,0,0,0.3))' : 'none',
+          }}
+        >
+          <span style={{ fontSize: size, lineHeight: 1, display: 'block' }}>
+            {ingredient.emoji}
+          </span>
+        </div>
+        {showLabel && !dragging && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{
+              background: '#ff6b35',
+              color: 'white',
+              borderRadius: 8,
+              padding: '1px 6px',
+              fontSize: Math.max(9, size * 0.22),
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              pointerEvents: 'none',
+            }}
+          >
+            {learningWord}
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );

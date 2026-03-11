@@ -41,6 +41,11 @@ export const MathQuiz = () => {
     if (currentQ) speak(currentQ.question);
   }, [currentQ?.id]);
 
+  // Speak hint when it becomes visible
+  useEffect(() => {
+    if (showHint && currentQ) speak(`${t.mathQuiz.hintPrefix} ${currentQ.hint}`);
+  }, [showHint]);
+
   const handleAnswer = (value: number) => {
     if (!currentQ) return;
 

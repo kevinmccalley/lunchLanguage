@@ -41,7 +41,9 @@ export const CelebrationScreen = () => {
   const { speak } = useSpeech();
 
   useEffect(() => {
-    speak(t.celebration.title);
+    if (!selectedMeal) return;
+    const meal = getMealInfo(selectedMeal);
+    speak(`${t.celebration.title}. ${t.celebration.subtitle(meal.emoji, t.meals[selectedMeal].name)}`);
   }, [t]);
 
   if (!selectedMeal) return null;

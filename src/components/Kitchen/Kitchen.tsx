@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { getMealInfo } from '../../data/meals';
@@ -8,6 +8,7 @@ import { ChefDialog } from '../Chef/ChefDialog';
 import { Button } from '../UI/Button';
 import { StarScore } from '../UI/StarScore';
 import { useT } from '../../i18n/useT';
+import { useSpeech } from '../../hooks/useSpeech';
 
 export const Kitchen = () => {
   const {
@@ -19,7 +20,12 @@ export const Kitchen = () => {
   const meal = getMealInfo(selectedMeal!);
   const t = useT();
   const mealName = t.meals[selectedMeal!].name;
+  const { speak } = useSpeech();
   const [showSlicePicker, setShowSlicePicker] = useState(false);
+
+  useEffect(() => {
+    speak(`${t.kitchen.myMeal(mealName)}. ${t.kitchen.addHint}. ${t.kitchen.doubleTapHint}`);
+  }, [t]);
 
   const ingredientCount = placedIngredients.length;
 

@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChefCharacter } from './ChefCharacter';
 import { useGameStore } from '../../store/gameStore';
+import { useSpeech } from '../../hooks/useSpeech';
 
 interface Props {
   compact?: boolean;
@@ -8,6 +10,11 @@ interface Props {
 
 export const ChefDialog = ({ compact = false }: Props) => {
   const { chefMessage, chefEmotion } = useGameStore();
+  const { speak } = useSpeech();
+
+  useEffect(() => {
+    if (chefMessage) speak(chefMessage);
+  }, [chefMessage]);
 
   return (
     <div
