@@ -4,7 +4,6 @@ import { getIngredientById } from '../../data/ingredients';
 import { useGameStore } from '../../store/gameStore';
 import { useLanguageStore } from '../../store/languageStore';
 import { TRANSLATIONS } from '../../i18n/translations';
-import { useT } from '../../i18n/useT';
 import type { PlacedIngredient } from '../../types';
 
 interface Props {
@@ -15,16 +14,13 @@ interface Props {
 export const DraggableIngredient = ({ item, containerRef }: Props) => {
   const { moveIngredient, removeIngredient } = useGameStore();
   const { learningLanguage } = useLanguageStore();
-  const t = useT();
   const ingredient = getIngredientById(item.ingredientId);
   const [dragging, setDragging] = useState(false);
 
-  const nativeName = ingredient ? (t.ingredients[ingredient.id] ?? ingredient.name) : '';
   const learningWord = learningLanguage && ingredient
     ? TRANSLATIONS[learningLanguage].ingredients[ingredient.id]
     : null;
-  // Only show label if it differs from the native word
-  const showLabel = learningWord && learningWord !== nativeName;
+  const showLabel = !!learningWord;
 
   // Use motion values for position — avoids transform/left+top stacking bug
   const x = useMotionValue(item.x);

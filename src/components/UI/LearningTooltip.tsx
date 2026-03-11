@@ -39,7 +39,7 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
     learningWord = learningT.meals[mealId]?.name;
   }
 
-  if (!learningWord || learningWord === nativeWord) return <>{children}</>;
+  if (!learningWord) return <>{children}</>;
 
   const tooltipSentence = t.tooltip.isInLanguage(nativeWord, learningWord, langName);
 
