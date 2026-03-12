@@ -52,7 +52,7 @@ export const Kitchen = () => {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 16px', background: 'white',
+        padding: '8px 16px 8px 152px', background: 'white',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)', flexShrink: 0,
       }}>
         <button

@@ -1,77 +1,118 @@
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n/useT';
 import { DraggableIngredient } from '../Ingredients/DraggableIngredient';
 import { PizzaBase } from './plates/PizzaBase';
-import { HamburgerBase } from './plates/HamburgerBase';
+import { HamburgerStack } from './HamburgerStack';
 import { BurritoBase } from './plates/BurritoBase';
 import { SaladBase } from './plates/SaladBase';
 import { SushiBase } from './plates/SushiBase';
 import { SandwichBase } from './plates/SandwichBase';
+import { getIngredientById } from '../../data/ingredients';
 
 interface Props {
   plateRef: React.RefObject<HTMLDivElement | null>;
 }
 
-const PlateComponents = {
-  pizza:     PizzaBase,
-  hamburger: HamburgerBase,
-  burrito:   BurritoBase,
-  salad:     SaladBase,
-  sushi:     SushiBase,
-  sandwich:  SandwichBase,
-};
-
 export const MealPlate = ({ plateRef }: Props) => {
-  const { selectedMeal, placedIngredients, pizzaSlices } = useGameStore();
+  const { selectedMeal, placedIngredients, pizzaSlices, removeIngredient } = useGameStore();
+  const t = useT();
 
   if (!selectedMeal) return null;
 
-  const PlateBase = PlateComponents[selectedMeal];
+  // ─── Pizza ──────────────────────────────────────────────────────────────────
+  if (selectedMeal === 'pizza') {
+    // Group placed ingredients by id for the chip removal bar
+    const grouped: Record<string, typeof placedIngredients> = {};
+    placedIngredients.forEach(item => {
+      (grouped[item.ingredientId] ??= []).push(item);
+    });
+
+    return (
+      <div
+        ref={plateRef}
+        style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}
+      >
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <PizzaBase slices={pizzaSlices} placedIngredients={placedIngredients} />
+        </div>
+
+        {/* Ingredient removal chips */}
+        {Object.keys(grouped).length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 6, left: 6, right: 6,
+            display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center',
+          }}>
+            {Object.entries(grouped).map(([id, items]) => {
+              const ing = getIngredientById(id);
+              const name = t.ingredients[id] ?? ing?.name ?? id;
+              return (
+                <motion.button
+                  key={id}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => removeIngredient(items[items.length - 1].instanceId)}
+                  style={{
+                    background: 'rgba(255,255,255,0.92)', border: '2px solid #ff6b35',
+                    borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    color: '#333', fontFamily: 'inherit', boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  }}
+                >
+                  {ing?.emoji} {name}
+                  {items.length > 1 && <span style={{ color: '#ff6b35' }}>×{items.length}</span>}
+                  <span style={{ color: '#ff6b35', marginLeft: 2 }}>✕</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Hamburger ──────────────────────────────────────────────────────────────
+  if (selectedMeal === 'hamburger') {
+    return (
+      <div
+        ref={plateRef}
+        style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}
+      >
+        <HamburgerStack />
+        {placedIngredients.length > 0 && (
+          <div style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 11, color: '#aaa', fontWeight: 500 }}>
+            Tap a layer to remove 🗑️
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Other meals (salad, burrito, sushi, sandwich) ───────────────────────────
+  const PlateComponents = {
+    burrito:  BurritoBase,
+    salad:    SaladBase,
+    sushi:    SushiBase,
+    sandwich: SandwichBase,
+  } as const;
+
+  const PlateBase = PlateComponents[selectedMeal as keyof typeof PlateComponents];
+  if (!PlateBase) return null;
 
   return (
     <div
       ref={plateRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        flex: 1,
-        overflow: 'hidden',
-        minHeight: 260,
-      }}
+      style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}
     >
-      {/* Plate/food base illustration */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}
-      >
-        <PlateBase slices={pizzaSlices} />
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        <PlateBase />
       </div>
-
-      {/* Draggable placed ingredients */}
       <AnimatePresence>
         {placedIngredients.map((item) => (
           <DraggableIngredient key={item.instanceId} item={item} containerRef={plateRef} />
         ))}
       </AnimatePresence>
-
-      {/* Trash hint */}
       {placedIngredients.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            right: 10,
-            fontSize: 11,
-            color: '#aaa',
-            fontWeight: 500,
-          }}
-        >
+        <div style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 11, color: '#aaa', fontWeight: 500 }}>
           Double-tap to remove 🗑️
         </div>
       )}
