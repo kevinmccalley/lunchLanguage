@@ -51,6 +51,11 @@ export const MathQuiz = () => {
     }
   }, [isFinished]);
 
+  // Re-translate chef message when language changes
+  useEffect(() => {
+    setChefMessage(t.kitchen.doneMessage, 'excited');
+  }, [t]);
+
   // Speak each question as it appears
   useEffect(() => {
     if (currentQ) speak(currentQ.question);
