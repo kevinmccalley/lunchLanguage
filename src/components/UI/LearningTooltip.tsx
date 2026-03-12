@@ -74,6 +74,20 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
   const tooltip = (
     <AnimatePresence>
       {visible && (
+        // Outer div owns the fixed position + centering transform.
+        // It must be separate from motion.div because framer-motion's animated
+        // y/scale overwrites the CSS transform property, discarding translate(-50%,-100%).
+        <div
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            // Move left by 50% of own width (center) and up by 100% of own height (above trigger)
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999,
+            pointerEvents: 'auto',
+          }}
+        >
         <motion.div
           initial={{ opacity: 0, y: 6, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -82,13 +96,6 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
           onMouseEnter={() => { if (dismissTimer.current) clearTimeout(dismissTimer.current); }}
           onMouseLeave={hideFast}
           style={{
-            position: 'fixed',
-            // pos already contains (r.top - 8); transform moves the element up by its own height
-            // so the bottom edge sits exactly 8px above the top of the trigger
-            top: pos.top,
-            left: pos.left,
-            transform: 'translate(-50%, -100%)',
-            zIndex: 99999,
             background: 'white',
             border: '2px solid #ff6b35',
             borderRadius: 12,
@@ -98,7 +105,6 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
             maxWidth: 260,
             textAlign: 'center',
             whiteSpace: 'normal',
-            pointerEvents: 'auto',
           }}
         >
           {/* Arrow pointing down */}
@@ -144,6 +150,7 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
             {tooltipSentence}
           </div>
         </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
