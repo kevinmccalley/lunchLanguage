@@ -2,9 +2,14 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChefCharacter } from '../Chef/ChefCharacter';
 import { Button } from './Button';
+import { LearningTooltip } from './LearningTooltip';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n/useT';
 import { useSpeech } from '../../hooks/useSpeech';
+import type { MealType } from '../../types';
+
+// Same order as t.welcome.mealBadges
+const BADGE_MEAL_IDS: MealType[] = ['pizza', 'hamburger', 'salad', 'sushi', 'burrito', 'sandwich'];
 
 const FLOATING_FOOD = ['🍕','🍔','🌯','🥗','🍱','🥪','🍅','🧀','🥬','🍄','🫒','🥕','🌽'];
 
@@ -96,17 +101,19 @@ export const WelcomeScreen = () => {
           transition={{ delay: 0.8 }}
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}
         >
-          {t.welcome.mealBadges.map(label => (
-            <span
-              key={label}
-              style={{
-                background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px',
-                fontSize: 12, color: 'white', fontWeight: 600,
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}
-            >
-              {label}
-            </span>
+          {t.welcome.mealBadges.map((label, i) => (
+            <LearningTooltip key={label} mealId={BADGE_MEAL_IDS[i]} nativeWord={t.meals[BADGE_MEAL_IDS[i]].name}>
+              <span
+                style={{
+                  background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px',
+                  fontSize: 12, color: 'white', fontWeight: 600,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  cursor: 'default',
+                }}
+              >
+                {label}
+              </span>
+            </LearningTooltip>
           ))}
         </motion.div>
 
