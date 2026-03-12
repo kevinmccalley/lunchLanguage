@@ -14,6 +14,7 @@ export const MealSelector = () => {
   const { speak } = useSpeech();
 
   useEffect(() => {
+    setChefMessage(t.welcome.pickMessage, 'excited');
     speak(`${t.mealSelect.title}. ${t.mealSelect.prompt}`);
   }, [t]);
 

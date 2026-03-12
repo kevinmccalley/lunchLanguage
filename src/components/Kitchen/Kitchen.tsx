@@ -25,6 +25,7 @@ export const Kitchen = () => {
   const [burritoWrapping, setBurritoWrapping] = useState(false);
 
   useEffect(() => {
+    setChefMessage(t.kitchen.addHint, 'happy');
     speak(`${t.kitchen.myMeal(mealName)}. ${t.kitchen.addHint}. ${t.kitchen.doubleTapHint}`);
   }, [t]);
 

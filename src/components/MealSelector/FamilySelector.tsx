@@ -18,6 +18,7 @@ export const FamilySelector = () => {
   const { speak } = useSpeech();
 
   useEffect(() => {
+    setChefMessage(t.meals[selectedMeal!].chefIntro, 'excited');
     speak(`${t.family.title}. ${t.family.prompt}`);
   }, [t]);
 
