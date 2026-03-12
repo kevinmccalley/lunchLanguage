@@ -189,7 +189,8 @@ export const HamburgerStack = () => {
   const topBunDomeY = topBunBottom - TOP_BUN_H;
 
   // Dynamic viewBox to accommodate tall stacks
-  const minY = Math.min(topBunDomeY - 10, 30);
+  // Bun is lifted by TOP_BUN_H*0.82 so its dome top sits ~80px above topBunDomeY
+  const minY = Math.min(topBunDomeY - 90, 30);
   const vbHeight = 360 - minY;
 
   return (
@@ -234,8 +235,8 @@ export const HamburgerStack = () => {
         ))}
       </AnimatePresence>
 
-      {/* Top bun dome */}
-      <g transform={`translate(0, ${topBunDomeY - 30})`}>
+      {/* Top bun dome — lifted so outer ellipse bottom sits at topBunBottom (not 61px into the stack) */}
+      <g transform={`translate(0, ${topBunDomeY - 30 - Math.round(TOP_BUN_H * 0.82)})`}>
         <ellipse cx={CX} cy={TOP_BUN_H + 30} rx={110} ry={TOP_BUN_H * 0.82} fill="#c49a5a" />
         <ellipse cx={CX} cy={TOP_BUN_H * 0.72 + 30} rx={106} ry={TOP_BUN_H * 0.67} fill="#d4a96a" />
         <ellipse cx={CX} cy={TOP_BUN_H * 0.5 + 30} rx={100} ry={TOP_BUN_H * 0.5} fill="#e8c589" />
