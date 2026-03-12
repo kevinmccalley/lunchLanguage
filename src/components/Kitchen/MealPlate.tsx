@@ -5,8 +5,8 @@ import { DraggableIngredient } from '../Ingredients/DraggableIngredient';
 import { PizzaBase } from './plates/PizzaBase';
 import { HamburgerStack } from './HamburgerStack';
 import { BurritoAssembly } from './BurritoAssembly';
-import { SaladBase } from './plates/SaladBase';
-import { SushiBase } from './plates/SushiBase';
+import { SaladAssembly } from './SaladAssembly';
+import { SushiAssembly } from './SushiAssembly';
 import { SandwichBase } from './plates/SandwichBase';
 import { getIngredientById } from '../../data/ingredients';
 
@@ -131,15 +131,92 @@ export const MealPlate = ({ plateRef, burritoWrapping = false }: Props) => {
     );
   }
 
-  // ─── Other meals (salad, sushi, sandwich) ────────────────────────────────────
-  const PlateComponents = {
-    salad:    SaladBase,
-    sushi:    SushiBase,
-    sandwich: SandwichBase,
-  } as const;
+  // ─── Salad ───────────────────────────────────────────────────────────────────
+  if (selectedMeal === 'salad') {
+    const grouped: Record<string, typeof placedIngredients> = {};
+    placedIngredients.forEach(item => { (grouped[item.ingredientId] ??= []).push(item); });
 
-  const PlateBase = PlateComponents[selectedMeal as keyof typeof PlateComponents];
-  if (!PlateBase) return null;
+    return (
+      <div ref={plateRef} style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <SaladAssembly placedIngredients={placedIngredients} />
+        </div>
+        {Object.keys(grouped).length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 6, left: 6, right: 6,
+            display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center',
+          }}>
+            {Object.entries(grouped).map(([id, items]) => {
+              const ing = getIngredientById(id);
+              const name = t.ingredients[id] ?? ing?.name ?? id;
+              return (
+                <motion.button
+                  key={id}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => removeIngredient(items[items.length - 1].instanceId)}
+                  style={{
+                    background: 'rgba(255,255,255,0.92)', border: '2px solid #2e7d32',
+                    borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    color: '#333', fontFamily: 'inherit', boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  }}
+                >
+                  {ing?.emoji} {name}
+                  {items.length > 1 && <span style={{ color: '#2e7d32' }}>×{items.length}</span>}
+                  <span style={{ color: '#2e7d32', marginLeft: 2 }}>✕</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Sushi ───────────────────────────────────────────────────────────────────
+  if (selectedMeal === 'sushi') {
+    const grouped: Record<string, typeof placedIngredients> = {};
+    placedIngredients.forEach(item => { (grouped[item.ingredientId] ??= []).push(item); });
+
+    return (
+      <div ref={plateRef} style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <SushiAssembly placedIngredients={placedIngredients} />
+        </div>
+        {Object.keys(grouped).length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 6, left: 6, right: 6,
+            display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center',
+          }}>
+            {Object.entries(grouped).map(([id, items]) => {
+              const ing = getIngredientById(id);
+              const name = t.ingredients[id] ?? ing?.name ?? id;
+              return (
+                <motion.button
+                  key={id}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => removeIngredient(items[items.length - 1].instanceId)}
+                  style={{
+                    background: 'rgba(255,255,255,0.92)', border: '2px solid #1c2e1c',
+                    borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    color: '#333', fontFamily: 'inherit', boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  }}
+                >
+                  {ing?.emoji} {name}
+                  {items.length > 1 && <span style={{ color: '#1c2e1c' }}>×{items.length}</span>}
+                  <span style={{ color: '#1c2e1c', marginLeft: 2 }}>✕</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Sandwich (and any future meals) ─────────────────────────────────────────
+  if (selectedMeal !== 'sandwich') return null;
 
   return (
     <div
@@ -147,7 +224,7 @@ export const MealPlate = ({ plateRef, burritoWrapping = false }: Props) => {
       style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}
     >
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <PlateBase />
+        <SandwichBase />
       </div>
       <AnimatePresence>
         {placedIngredients.map((item) => (
