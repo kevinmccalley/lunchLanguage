@@ -51,9 +51,10 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
   const computePos = () => {
     if (!triggerRef.current) return;
     const r = triggerRef.current.getBoundingClientRect();
+    // Use viewport coords directly — paired with position:fixed so no scroll offset needed
     setPos({
-      top: r.top + window.scrollY,
-      left: r.left + r.width / 2 + window.scrollX,
+      top: r.top - 8,
+      left: r.left + r.width / 2,
     });
   };
 
@@ -81,9 +82,10 @@ export const LearningTooltip = ({ children, ingredientKey, mealId, nativeWord }:
           onMouseEnter={() => { if (dismissTimer.current) clearTimeout(dismissTimer.current); }}
           onMouseLeave={hideFast}
           style={{
-            position: 'absolute',
-            // Place the bottom of the tooltip 8px above the top of the trigger
-            top: pos.top - 8,
+            position: 'fixed',
+            // pos already contains (r.top - 8); transform moves the element up by its own height
+            // so the bottom edge sits exactly 8px above the top of the trigger
+            top: pos.top,
             left: pos.left,
             transform: 'translate(-50%, -100%)',
             zIndex: 99999,
