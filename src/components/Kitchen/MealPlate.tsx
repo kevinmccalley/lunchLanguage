@@ -1,13 +1,12 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n/useT';
-import { DraggableIngredient } from '../Ingredients/DraggableIngredient';
 import { PizzaBase } from './plates/PizzaBase';
 import { HamburgerStack } from './HamburgerStack';
 import { BurritoAssembly } from './BurritoAssembly';
 import { SaladAssembly } from './SaladAssembly';
 import { SushiAssembly } from './SushiAssembly';
-import { SandwichBase } from './plates/SandwichBase';
+import { SandwichStack } from './SandwichStack';
 import { getIngredientById } from '../../data/ingredients';
 
 interface Props {
@@ -215,25 +214,16 @@ export const MealPlate = ({ plateRef, burritoWrapping = false }: Props) => {
     );
   }
 
-  // ─── Sandwich (and any future meals) ─────────────────────────────────────────
-  if (selectedMeal !== 'sandwich') return null;
-
+  // ─── Sandwich ────────────────────────────────────────────────────────────────
   return (
     <div
       ref={plateRef}
       style={{ position: 'relative', width: '100%', flex: 1, overflow: 'hidden', minHeight: 260 }}
     >
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <SandwichBase />
-      </div>
-      <AnimatePresence>
-        {placedIngredients.map((item) => (
-          <DraggableIngredient key={item.instanceId} item={item} containerRef={plateRef} />
-        ))}
-      </AnimatePresence>
+      <SandwichStack />
       {placedIngredients.length > 0 && (
         <div style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 11, color: '#aaa', fontWeight: 500 }}>
-          Double-tap to remove 🗑️
+          Tap a layer to remove 🗑️
         </div>
       )}
     </div>
