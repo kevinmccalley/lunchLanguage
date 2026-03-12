@@ -22,6 +22,7 @@ export const Kitchen = () => {
   const mealName = t.meals[selectedMeal!].name;
   const { speak } = useSpeech();
   const [showSlicePicker, setShowSlicePicker] = useState(false);
+  const [burritoWrapping, setBurritoWrapping] = useState(false);
 
   useEffect(() => {
     speak(`${t.kitchen.myMeal(mealName)}. ${t.kitchen.addHint}. ${t.kitchen.doubleTapHint}`);
@@ -35,7 +36,12 @@ export const Kitchen = () => {
       return;
     }
     setChefMessage(t.kitchen.doneMessage, 'excited');
-    setPhase('mathQuiz');
+    if (selectedMeal === 'burrito') {
+      setBurritoWrapping(true);
+      setTimeout(() => setPhase('mathQuiz'), 1800);
+    } else {
+      setPhase('mathQuiz');
+    }
   };
 
   return (
@@ -133,7 +139,7 @@ export const Kitchen = () => {
       </div>
 
       {/* Plate area */}
-      <MealPlate plateRef={plateRef} />
+      <MealPlate plateRef={plateRef} burritoWrapping={burritoWrapping} />
 
       {/* Ingredient shelf */}
       <IngredientShelf onAdd={addIngredient} plateRef={plateRef} />
