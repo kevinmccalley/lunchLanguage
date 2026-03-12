@@ -17,11 +17,16 @@ function srng(seed: string, n: number): number {
   return (h >>> 0) / 4294967295;
 }
 
-// Random point inside circle of radius R centered at 0,0
-function circlePoint(seed: string, idx: number, R: number) {
-  const angle = srng(seed, idx * 2) * Math.PI * 2;
-  const r = Math.sqrt(srng(seed, idx * 2 + 1)) * R;
-  return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
+const GOLDEN_ANGLE = 2.399963229; // 2π/φ² — sunflower spiral
+
+// Evenly-distributed point using golden angle spiral (uniform per-slice coverage)
+function goldenPoint(instanceId: string, idx: number, total: number, R: number) {
+  const phase = srng(instanceId, 999) * Math.PI * 2;
+  const angle = phase + idx * GOLDEN_ANGLE;
+  const r = Math.sqrt((idx + 0.5) / total) * R;
+  const rJitter = 1 + (srng(instanceId, idx * 3 + 1) - 0.5) * 0.24;
+  const aJitter = (srng(instanceId, idx * 3 + 2) - 0.5) * 0.3;
+  return { x: r * rJitter * Math.cos(angle + aJitter), y: r * rJitter * Math.sin(angle + aJitter) };
 }
 
 const TOPPING_COUNT: Record<string, number> = {
@@ -127,7 +132,7 @@ export const PizzaBase = ({ slices, placedIngredients = [] }: Props) => {
   placedIngredients.forEach((item) => {
     const count = TOPPING_COUNT[item.ingredientId] ?? 6;
     for (let i = 0; i < count; i++) {
-      const pt = circlePoint(item.instanceId, i, TOPPING_AREA_R);
+      const pt = goldenPoint(item.instanceId, i, count, TOPPING_AREA_R);
       const rot = srng(item.instanceId, i * 2 + 77) * 360;
       toppingEls.push(
         <g
