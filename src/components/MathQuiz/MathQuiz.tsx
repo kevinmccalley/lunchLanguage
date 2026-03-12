@@ -36,6 +36,21 @@ export const MathQuiz = () => {
   const currentQ = questions[currentQuestionIndex];
   const isFinished = currentQuestionIndex >= questions.length;
 
+  // Build ingredient summary for the reference panel
+  const counts: Record<string, number> = {};
+  for (const item of placedIngredients) {
+    counts[item.ingredientId] = (counts[item.ingredientId] ?? 0) + 1;
+  }
+  const ingredientSummary = Object.entries(counts);
+
+  // Fallback: if somehow stuck in finished state without phase change, advance
+  useEffect(() => {
+    if (isFinished) {
+      const t = setTimeout(() => setPhase('celebration'), 400);
+      return () => clearTimeout(t);
+    }
+  }, [isFinished]);
+
   // Speak each question as it appears
   useEffect(() => {
     if (currentQ) speak(currentQ.question);
@@ -129,6 +144,32 @@ export const MathQuiz = () => {
             }} />
           ))}
         </div>
+
+        {/* Ingredient recap — lets kids count while answering */}
+        {ingredientSummary.length > 0 && (
+          <div style={{
+            background: 'white', borderRadius: 14, padding: '8px 12px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.07)', marginBottom: 10,
+            display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#aaa', letterSpacing: 0.5, marginRight: 2 }}>
+              YOUR INGREDIENTS:
+            </span>
+            {ingredientSummary.map(([id, n]) => {
+              const ingName = getIngName(id);
+              return (
+                <span key={id} style={{
+                  background: meal.bgColor, borderRadius: 20, padding: '3px 9px',
+                  fontSize: 13, fontWeight: 700, color: meal.accentColor,
+                  border: `1.5px solid ${meal.accentColor}22`,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}>
+                  {ingName} ×{n}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {!isFinished && currentQ && (
           <AnimatePresence mode="wait">

@@ -19,6 +19,8 @@ export interface MathQuizT {
   qTotalFamily: (total: number, meal: string, n: number) => string;
   qUniqueTypes: (meal: string) => string;
   qCompare: (cA: number, eA: string, nA: string, cB: number, eB: string, nB: string) => string;
+  qCombined: (cA: number, nA: string, cB: number, nB: string) => string;
+  qNotType: (total: number, count: number, name: string, meal: string) => string;
   // Hint templates
   hTotal: (meal: string) => string;
   hCountIngredient: (ingName: string) => string;
@@ -28,6 +30,8 @@ export interface MathQuizT {
   hTotalFamily: (total: number, n: number) => string;
   hUniqueTypes: string;
   hCompare: (a: number, b: number) => string;
+  hCombined: (cA: number, cB: number) => string;
+  hNotType: (total: number, count: number) => string;
 }
 
 export interface Translations {
