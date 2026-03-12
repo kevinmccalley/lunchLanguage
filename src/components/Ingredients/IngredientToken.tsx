@@ -37,8 +37,15 @@ const BG_MAP: Record<string, string> = {
   '#e91e8c': '#fde8f4',
 };
 
+// Return a grey fallback for near-white colors that are invisible on white bg
+function visibleBorderColor(color: string): string {
+  const light = ['#fdfefe', '#d5d8dc', '#f9e79f'];
+  return light.includes(color) ? '#aaaaaa' : color;
+}
+
 export const IngredientToken = ({ ingredient, size = 64, onClick, dragging }: Props) => {
   const bg = BG_MAP[ingredient.color] ?? '#f0f0f0';
+  const borderColor = visibleBorderColor(ingredient.color);
 
   return (
     <motion.div
@@ -51,7 +58,7 @@ export const IngredientToken = ({ ingredient, size = 64, onClick, dragging }: Pr
         height: size,
         borderRadius: '50%',
         background: bg,
-        border: `3px solid ${ingredient.color}`,
+        border: `3px solid ${borderColor}`,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -71,7 +78,7 @@ export const IngredientToken = ({ ingredient, size = 64, onClick, dragging }: Pr
           style={{
             fontSize: Math.max(9, size * 0.15),
             fontWeight: 700,
-            color: ingredient.color,
+            color: borderColor,
             textAlign: 'center',
             lineHeight: 1.1,
             maxWidth: size - 8,

@@ -75,12 +75,12 @@ export const Kitchen = () => {
       </div>
 
       {/* Chef dialog */}
-      <div style={{ flexShrink: 0 }}>
+      <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
         <ChefDialog compact />
       </div>
 
       {/* Stats bar */}
-      <div style={{ display: 'flex', gap: 10, padding: '4px 16px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, padding: '4px 16px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
         <motion.div
           key={ingredientCount}
           animate={{ scale: [1, 1.2, 1] }}
