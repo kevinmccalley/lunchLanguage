@@ -122,7 +122,8 @@ export const MathQuiz = () => {
       {/* Header */}
       <div style={{
         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        padding: '10px 16px 10px 152px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        boxSizing: 'border-box',
       }}>
         <span style={{ fontSize: 18, fontWeight: 800, color: meal.accentColor }}>
           {t.mathQuiz.title}
