@@ -5,6 +5,7 @@ export type GamePhase =
   | 'mealSelect'
   | 'familySelect'
   | 'cooking'
+  | 'mealSplash'
   | 'mathQuiz'
   | 'celebration';
 

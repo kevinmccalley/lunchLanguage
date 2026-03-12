@@ -99,6 +99,11 @@ export interface Translations {
   };
   /** How this language names every other language. Used in tooltip messages. */
   langNames: Record<Language, string>;
+  splash: {
+    heading:      (mealName: string) => string;
+    tagline:      string;
+    tapToContinue: string;
+  };
   /** Setup screen strings */
   setup: {
     title: string;

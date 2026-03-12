@@ -119,6 +119,11 @@ const en: Translations = {
     en:'English', es:'Spanish', fr:'French', de:'German',
     ja:'Japanese', zh:'Chinese', pt:'Portuguese (PT)', 'pt-BR':'Portuguese (BR)',
   },
+  splash: {
+    heading:       (meal) => `Your ${meal} is ready! 🎉`,
+    tagline:       'What a masterpiece — now let\'s count!',
+    tapToContinue: 'Tap anywhere to continue →',
+  },
   setup: {
     title: 'Welcome to Lunch Language!',
     nativePrompt: 'What language do you speak?',
@@ -247,6 +252,11 @@ const es: Translations = {
   langNames: {
     en:'Inglés', es:'Español', fr:'Francés', de:'Alemán',
     ja:'Japonés', zh:'Chino', pt:'Portugués (PT)', 'pt-BR':'Portugués (BR)',
+  },
+  splash: {
+    heading:       (meal) => `¡Tu ${meal} está listo! 🎉`,
+    tagline:       '¡Qué obra maestra — ahora a contar!',
+    tapToContinue: 'Toca en cualquier lugar para continuar →',
   },
   setup: {
     title: '¡Bienvenido a Lenguaje del Almuerzo!',
@@ -377,6 +387,11 @@ const fr: Translations = {
     en:'Anglais', es:'Espagnol', fr:'Français', de:'Allemand',
     ja:'Japonais', zh:'Chinois', pt:'Portugais (PT)', 'pt-BR':'Portugais (BR)',
   },
+  splash: {
+    heading:       (meal) => `Ton ${meal} est prêt ! 🎉`,
+    tagline:       'Quel chef-d\'œuvre — maintenant comptons !',
+    tapToContinue: 'Appuie n\'importe où pour continuer →',
+  },
   setup: {
     title: 'Bienvenue sur La Langue du Déjeuner !',
     nativePrompt: 'Quelle langue parles-tu ?',
@@ -505,6 +520,11 @@ const de: Translations = {
   langNames: {
     en:'Englisch', es:'Spanisch', fr:'Französisch', de:'Deutsch',
     ja:'Japanisch', zh:'Chinesisch', pt:'Portugiesisch (PT)', 'pt-BR':'Portugiesisch (BR)',
+  },
+  splash: {
+    heading:       (meal) => `Dein${meal === 'Pizza' || meal === 'Salat' ? 'e' : ''} ${meal} ist fertig! 🎉`,
+    tagline:       'Was ein Meisterwerk — jetzt zählen wir!',
+    tapToContinue: 'Tippe irgendwo, um fortzufahren →',
   },
   setup: {
     title: 'Willkommen bei Mittagessen-Sprache!',
@@ -635,6 +655,11 @@ const ja: Translations = {
     en:'英語', es:'スペイン語', fr:'フランス語', de:'ドイツ語',
     ja:'日本語', zh:'中国語', pt:'ポルトガル語 (PT)', 'pt-BR':'ポルトガル語 (BR)',
   },
+  splash: {
+    heading:       (meal) => `${meal}の完成！🎉`,
+    tagline:       '素晴らしい！さあ、数えてみよう！',
+    tapToContinue: 'どこかをタップして続ける →',
+  },
   setup: {
     title: 'ランチ・ランゲージへようこそ！',
     nativePrompt: 'あなたが話す言語は？',
@@ -763,6 +788,11 @@ const zh: Translations = {
   langNames: {
     en:'英语', es:'西班牙语', fr:'法语', de:'德语',
     ja:'日语', zh:'中文', pt:'葡萄牙语 (PT)', 'pt-BR':'葡萄牙语 (BR)',
+  },
+  splash: {
+    heading:       (meal) => `你的${meal}做好了！🎉`,
+    tagline:       '太棒了！现在我们来数数！',
+    tapToContinue: '点击任意处继续 →',
   },
   setup: {
     title: '欢迎来到午餐语言！',
@@ -893,6 +923,11 @@ const pt: Translations = {
     en:'Inglês', es:'Espanhol', fr:'Francês', de:'Alemão',
     ja:'Japonês', zh:'Chinês', pt:'Português (PT)', 'pt-BR':'Português (BR)',
   },
+  splash: {
+    heading:       (meal) => `O teu ${meal} está pronto! 🎉`,
+    tagline:       'Que obra-prima — agora vamos contar!',
+    tapToContinue: 'Toca em qualquer lugar para continuar →',
+  },
   setup: {
     title: 'Bem-vindo ao A Língua do Almoço!',
     nativePrompt: 'Que língua falas?',
@@ -1021,6 +1056,11 @@ const ptBR: Translations = {
   langNames: {
     en:'Inglês', es:'Espanhol', fr:'Francês', de:'Alemão',
     ja:'Japonês', zh:'Chinês', pt:'Português (PT)', 'pt-BR':'Português (BR)',
+  },
+  splash: {
+    heading:       (meal) => `O seu ${meal} está pronto! 🎉`,
+    tagline:       'Que obra-prima — agora vamos contar!',
+    tapToContinue: 'Toque em qualquer lugar para continuar →',
   },
   setup: {
     title: 'Bem-vindo ao A Língua do Almoço!',

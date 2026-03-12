@@ -39,9 +39,9 @@ export const Kitchen = () => {
     setChefMessage(t.kitchen.doneMessage, 'excited');
     if (selectedMeal === 'burrito') {
       setBurritoWrapping(true);
-      setTimeout(() => setPhase('mathQuiz'), 1800);
+      setTimeout(() => setPhase('mealSplash'), 1800);
     } else {
-      setPhase('mathQuiz');
+      setPhase('mealSplash');
     }
   };
 

@@ -7,6 +7,7 @@ import { MealSelector } from './components/MealSelector/MealSelector';
 import { FamilySelector } from './components/MealSelector/FamilySelector';
 import { Kitchen } from './components/Kitchen/Kitchen';
 import { MathQuiz } from './components/MathQuiz/MathQuiz';
+import { MealSplash } from './components/Splash/MealSplash';
 import { CelebrationScreen } from './components/UI/CelebrationScreen';
 import { LanguageSelector } from './components/UI/LanguageSelector';
 import { LanguageSetup } from './components/UI/LanguageSetup';
@@ -29,6 +30,7 @@ function App() {
         {phase === 'mealSelect'   && <MealSelector key="mealSelect" />}
         {phase === 'familySelect' && <FamilySelector key="familySelect" />}
         {phase === 'cooking'      && <Kitchen key="cooking" />}
+        {phase === 'mealSplash'   && <MealSplash key="mealSplash" />}
         {phase === 'mathQuiz'     && <MathQuiz key="mathQuiz" />}
         {phase === 'celebration'  && <CelebrationScreen key="celebration" />}
       </AnimatePresence>
