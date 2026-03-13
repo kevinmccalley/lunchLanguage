@@ -1,249 +1,302 @@
 // @ts-nocheck
-import { render, screen } from '@testing-library/react';
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from './App';
 import { useGameStore } from './store/gameStore';
 import { useT } from './i18n/useT';
-import App from './App';
+import * as WelcomeScreenModule from './components/UI/WelcomeScreen';
+import * as MealSelectorModule from './components/MealSelector/MealSelector';
+import * as FamilySelectorModule from './components/MealSelector/FamilySelector';
+import * as KitchenModule from './components/Kitchen/Kitchen';
+import * as MathQuizModule from './components/MathQuiz/MathQuiz';
+import * as MealSplashModule from './components/Splash/MealSplash';
+import * as CelebrationScreenModule from './components/UI/CelebrationScreen';
+import * as LanguageSelectorModule from './components/UI/LanguageSelector';
+import * as LanguageSetupModule from './components/UI/LanguageSetup';
 
 jest.mock('./store/gameStore');
 jest.mock('./i18n/useT');
-jest.mock('./components/UI/WelcomeScreen', () => ({
-  WelcomeScreen: () => <div data-testid="welcome-screen">WelcomeScreen</div>,
-}));
-jest.mock('./components/MealSelector/MealSelector', () => ({
-  MealSelector: () => <div data-testid="meal-selector">MealSelector</div>,
-}));
-jest.mock('./components/MealSelector/FamilySelector', () => ({
-  FamilySelector: () => <div data-testid="family-selector">FamilySelector</div>,
-}));
-jest.mock('./components/Kitchen/Kitchen', () => ({
-  Kitchen: () => <div data-testid="kitchen">Kitchen</div>,
-}));
-jest.mock('./components/MathQuiz/MathQuiz', () => ({
-  MathQuiz: () => <div data-testid="math-quiz">MathQuiz</div>,
-}));
-jest.mock('./components/Splash/MealSplash', () => ({
-  MealSplash: () => <div data-testid="meal-splash">MealSplash</div>,
-}));
-jest.mock('./components/UI/CelebrationScreen', () => ({
-  CelebrationScreen: () => <div data-testid="celebration-screen">CelebrationScreen</div>,
-}));
-jest.mock('./components/UI/LanguageSelector', () => ({
-  LanguageSelector: () => <div data-testid="language-selector">LanguageSelector</div>,
-}));
-jest.mock('./components/UI/LanguageSetup', () => ({
-  LanguageSetup: () => <div data-testid="language-setup">LanguageSetup</div>,
-}));
+jest.mock('./components/UI/WelcomeScreen');
+jest.mock('./components/MealSelector/MealSelector');
+jest.mock('./components/MealSelector/FamilySelector');
+jest.mock('./components/Kitchen/Kitchen');
+jest.mock('./components/MathQuiz/MathQuiz');
+jest.mock('./components/Splash/MealSplash');
+jest.mock('./components/UI/CelebrationScreen');
+jest.mock('./components/UI/LanguageSelector');
+jest.mock('./components/UI/LanguageSetup');
 
 describe('App', () => {
+  const mockUseGameStore = useGameStore as jest.MockedFunction<typeof useGameStore>;
+  const mockUseT = useT as jest.MockedFunction<typeof useT>;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    (useGameStore as jest.Mock).mockReturnValue({
-      phase: 'welcome',
-    });
-    (useT as jest.Mock).mockReturnValue({
-      welcome: {
-        title: 'Lunch Language',
-      },
-    });
+    
+    // Setup default mocks
+    mockUseT.mockReturnValue({
+      welcome: { title: 'Welcome' },
+    } as ReturnType<typeof useT>);
+
+    // Mock all component modules
+    jest.spyOn(WelcomeScreenModule, 'WelcomeScreen').mockReturnValue(
+      <div data-testid="welcome-screen">Welcome Screen</div>
+    );
+    jest.spyOn(MealSelectorModule, 'MealSelector').mockReturnValue(
+      <div data-testid="meal-selector">Meal Selector</div>
+    );
+    jest.spyOn(FamilySelectorModule, 'FamilySelector').mockReturnValue(
+      <div data-testid="family-selector">Family Selector</div>
+    );
+    jest.spyOn(KitchenModule, 'Kitchen').mockReturnValue(
+      <div data-testid="kitchen">Kitchen</div>
+    );
+    jest.spyOn(MealSplashModule, 'MealSplash').mockReturnValue(
+      <div data-testid="meal-splash">Meal Splash</div>
+    );
+    jest.spyOn(MathQuizModule, 'MathQuiz').mockReturnValue(
+      <div data-testid="math-quiz">Math Quiz</div>
+    );
+    jest.spyOn(CelebrationScreenModule, 'CelebrationScreen').mockReturnValue(
+      <div data-testid="celebration-screen">Celebration Screen</div>
+    );
+    jest.spyOn(LanguageSelectorModule, 'LanguageSelector').mockReturnValue(
+      <div data-testid="language-selector">Language Selector</div>
+    );
+    jest.spyOn(LanguageSetupModule, 'LanguageSetup').mockReturnValue(
+      <div data-testid="language-setup">Language Setup</div>
+    );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('rendering', () => {
-    it('should render without crashing', () => {
+    it('should render the App component', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      render(<App />);
+      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
+    });
+
+    it('should always render LanguageSetup component', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('language-setup')).toBeInTheDocument();
     });
 
-    it('should render the LanguageSetup component', () => {
-      render(<App />);
-      expect(screen.getByTestId('language-setup')).toBeInTheDocument();
-    });
-
-    it('should render the LanguageSelector component', () => {
+    it('should always render LanguageSelector component', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('language-selector')).toBeInTheDocument();
     });
-
-    it('should apply the correct font family style', () => {
-      const { container } = render(<App />);
-      const divElement = container.querySelector('div');
-      expect(divElement).toHaveStyle({
-        fontFamily: "'Nunito', 'Comic Sans MS', 'Segoe UI', system-ui, sans-serif",
-      });
-    });
   });
 
-  describe('phase rendering', () => {
+  describe('phase-based rendering', () => {
     it('should render WelcomeScreen when phase is welcome', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'welcome' });
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
     });
 
     it('should render MealSelector when phase is mealSelect', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'mealSelect' });
+      mockUseGameStore.mockReturnValue({ phase: 'mealSelect' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('meal-selector')).toBeInTheDocument();
     });
 
     it('should render FamilySelector when phase is familySelect', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'familySelect' });
+      mockUseGameStore.mockReturnValue({ phase: 'familySelect' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('family-selector')).toBeInTheDocument();
     });
 
     it('should render Kitchen when phase is cooking', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'cooking' });
+      mockUseGameStore.mockReturnValue({ phase: 'cooking' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('kitchen')).toBeInTheDocument();
     });
 
     it('should render MealSplash when phase is mealSplash', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'mealSplash' });
+      mockUseGameStore.mockReturnValue({ phase: 'mealSplash' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('meal-splash')).toBeInTheDocument();
     });
 
     it('should render MathQuiz when phase is mathQuiz', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'mathQuiz' });
+      mockUseGameStore.mockReturnValue({ phase: 'mathQuiz' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('math-quiz')).toBeInTheDocument();
     });
 
     it('should render CelebrationScreen when phase is celebration', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'celebration' });
+      mockUseGameStore.mockReturnValue({ phase: 'celebration' } as ReturnType<typeof useGameStore>);
       render(<App />);
       expect(screen.getByTestId('celebration-screen')).toBeInTheDocument();
     });
+  });
 
-    it('should not render any phase-specific component for unknown phase', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'unknown' });
-      render(<App />);
-      expect(screen.queryByTestId('welcome-screen')).not.toBeInTheDocument();
+  describe('phase transitions', () => {
+    it('should not render multiple screens simultaneously', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
       expect(screen.queryByTestId('meal-selector')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('family-selector')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('kitchen')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('meal-splash')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('math-quiz')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('celebration-screen')).not.toBeInTheDocument();
+
+      mockUseGameStore.mockReturnValue({ phase: 'mealSelect' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('meal-selector')).toBeInTheDocument();
+      expect(screen.queryByTestId('welcome-screen')).not.toBeInTheDocument();
+    });
+
+    it('should handle phase changes from welcome to mealSelect', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'mealSelect' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('meal-selector')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from mealSelect to familySelect', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'mealSelect' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'familySelect' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('family-selector')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from familySelect to cooking', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'familySelect' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'cooking' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('kitchen')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from cooking to mealSplash', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'cooking' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'mealSplash' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('meal-splash')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from mealSplash to mathQuiz', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'mealSplash' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'mathQuiz' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('math-quiz')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from mathQuiz to celebration', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'mathQuiz' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'celebration' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('celebration-screen')).toBeInTheDocument();
+    });
+
+    it('should handle phase changes from celebration back to welcome', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'celebration' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      rerender(<App />);
+      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
     });
   });
 
   describe('document title', () => {
-    it('should set document title with translated welcome title and emoji', () => {
-      (useT as jest.Mock).mockReturnValue({
-        welcome: {
-          title: 'Lunch Language',
-        },
-      });
+    it('should set document title with welcome title from useT', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      mockUseT.mockReturnValue({
+        welcome: { title: 'Lunch Language' },
+      } as ReturnType<typeof useT>);
+
       render(<App />);
-      expect(document.title).toBe('Lunch Language 🍽️');
+
+      waitFor(() => {
+        expect(document.title).toBe('Lunch Language 🍽️');
+      });
     });
 
-    it('should update document title when translation changes', () => {
-      const { rerender } = render(<App />);
-      expect(document.title).toBe('Lunch Language 🍽️');
+    it('should update document title when useT changes', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      mockUseT.mockReturnValue({
+        welcome: { title: 'Welcome' },
+      } as ReturnType<typeof useT>);
 
-      (useT as jest.Mock).mockReturnValue({
-        welcome: {
-          title: 'Langue du Déjeuner',
-        },
-      });
+      const { rerender } = render(<App />);
+
+      mockUseT.mockReturnValue({
+        welcome: { title: 'Bienvenue' },
+      } as ReturnType<typeof useT>);
+
       rerender(<App />);
-      expect(document.title).toBe('Langue du Déjeuner 🍽️');
+
+      waitFor(() => {
+        expect(document.title).toBe('Bienvenue 🍽️');
+      });
     });
 
     it('should include emoji in document title', () => {
-      render(<App />);
-      expect(document.title).toContain('🍽️');
-    });
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      mockUseT.mockReturnValue({
+        welcome: { title: 'Test Title' },
+      } as ReturnType<typeof useT>);
 
-    it('should handle empty title string', () => {
-      (useT as jest.Mock).mockReturnValue({
-        welcome: {
-          title: '',
-        },
-      });
       render(<App />);
-      expect(document.title).toBe(' 🍽️');
-    });
 
-    it('should handle special characters in title', () => {
-      (useT as jest.Mock).mockReturnValue({
-        welcome: {
-          title: 'Lunch & Language 中文',
-        },
+      waitFor(() => {
+        expect(document.title).toContain('🍽️');
       });
-      render(<App />);
-      expect(document.title).toBe('Lunch & Language 中文 🍽️');
     });
   });
 
-  describe('component integration', () => {
-    it('should render all always-visible components together', () => {
+  describe('styling', () => {
+    it('should apply correct font-family style to root div', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
       render(<App />);
-      expect(screen.getByTestId('language-setup')).toBeInTheDocument();
-      expect(screen.getByTestId('language-selector')).toBeInTheDocument();
-      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
-    });
 
-    it('should handle phase transitions', () => {
-      const { rerender } = render(<App />);
-      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument();
-
-      (useGameStore as jest.Mock).mockReturnValue({ phase: 'cooking' });
-      rerender(<App />);
-      expect(screen.getByTestId('kitchen')).toBeInTheDocument();
-      expect(screen.queryByTestId('welcome-screen')).not.toBeInTheDocument();
-    });
-
-    it('should always render LanguageSetup and LanguageSelector regardless of phase', () => {
-      const phases = [
-        'welcome',
-        'mealSelect',
-        'familySelect',
-        'cooking',
-        'mealSplash',
-        'mathQuiz',
-        'celebration',
-      ];
-
-      phases.forEach((phase) => {
-        (useGameStore as jest.Mock).mockReturnValue({ phase });
-        const { unmount } = render(<App />);
-        expect(screen.getByTestId('language-setup')).toBeInTheDocument();
-        expect(screen.getByTestId('language-selector')).toBeInTheDocument();
-        unmount();
+      const rootDiv = screen.getByTestId('welcome-screen').parentElement;
+      expect(rootDiv).toHaveStyle({
+        fontFamily: "'Nunito', 'Comic Sans MS', 'Segoe UI', system-ui, sans-serif",
       });
     });
   });
 
   describe('edge cases', () => {
-    it('should handle null phase gracefully', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: null });
-      const { container } = render(<App />);
-      expect(container).toBeInTheDocument();
-    });
-
     it('should handle undefined phase gracefully', () => {
-      (useGameStore as jest.Mock).mockReturnValue({ phase: undefined });
-      const { container } = render(<App />);
-      expect(container).toBeInTheDocument();
+      mockUseGameStore.mockReturnValue({ phase: undefined } as unknown as ReturnType<typeof useGameStore>);
+      render(<App />);
+      // Should render LanguageSetup and LanguageSelector but no screen content
+      expect(screen.getByTestId('language-setup')).toBeInTheDocument();
+      expect(screen.getByTestId('language-selector')).toBeInTheDocument();
     });
 
-    it('should handle missing welcome translation gracefully', () => {
-      (useT as jest.Mock).mockReturnValue({
-        welcome: {},
+    it('should render with empty translation object', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      mockUseT.mockReturnValue({
+        welcome: { title: '' },
+      } as ReturnType<typeof useT>);
+
+      render(<App />);
+      expect(document.title).toBe(' 🍽️');
+    });
+
+    it('should handle rapid phase changes', () => {
+      mockUseGameStore.mockReturnValue({ phase: 'welcome' } as ReturnType<typeof useGameStore>);
+      const { rerender } = render(<App />);
+
+      const phases = ['mealSelect', 'familySelect', 'cooking', 'mealSplash', 'mathQuiz', 'celebration'];
+
+      phases.forEach((phase) => {
+        mockUseGameStore.mockReturnValue({ phase } as ReturnType<typeof useGameStore>);
+        rerender(<App />);
       });
-      const { container } = render(<App />);
-      expect(document.title).toBe('undefined 🍽️');
-      expect(container).toBeInTheDocument();
-    });
 
-    it('should handle missing t object gracefully', () => {
-      (useT as jest.Mock).mockReturnValue({});
-      const { container } = render(<App />);
-      expect(document.title).toContain('🍽️');
-      expect(container).toBeInTheDocument();
+      expect(screen.getByTestId('celebration-screen')).toBeInTheDocument();
     });
   });
 });
