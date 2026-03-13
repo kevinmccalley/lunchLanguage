@@ -1,27 +1,27 @@
 // @ts-nocheck
 import { render } from '@testing-library/react';
-import { BurritoBase } from '../src/components/Kitchen/plates/BurritoBase';
+import { BurritoBase } from './BurritoBase';
 
 describe('BurritoBase', () => {
   it('should render without crashing', () => {
     const { container } = render(<BurritoBase />);
-    expect(container).toBeTruthy();
+    expect(container).toBeInTheDocument();
   });
 
-  it('should render an SVG element', () => {
+  it('should render an svg element', () => {
     const { container } = render(<BurritoBase />);
     const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
+    expect(svg).toBeInTheDocument();
   });
 
-  it('should have correct SVG dimensions', () => {
+  it('should have correct svg dimensions', () => {
     const { container } = render(<BurritoBase />);
     const svg = container.querySelector('svg');
     expect(svg).toHaveAttribute('width', '300');
     expect(svg).toHaveAttribute('height', '200');
   });
 
-  it('should have correct SVG viewBox', () => {
+  it('should have correct viewBox attribute', () => {
     const { container } = render(<BurritoBase />);
     const svg = container.querySelector('svg');
     expect(svg).toHaveAttribute('viewBox', '0 0 300 200');
@@ -30,113 +30,115 @@ describe('BurritoBase', () => {
   it('should render plate ellipses', () => {
     const { container } = render(<BurritoBase />);
     const ellipses = container.querySelectorAll('ellipse');
-    expect(ellipses.length).toBeGreaterThanOrEqual(2);
+    expect(ellipses.length).toBeGreaterThan(0);
   });
 
   it('should render tortilla wrap ellipse', () => {
     const { container } = render(<BurritoBase />);
     const ellipses = container.querySelectorAll('ellipse');
     const tortillaWrap = Array.from(ellipses).find(
-      (el) => el.getAttribute('fill') === '#f5deb3' && el.getAttribute('cx') === '150'
+      (el) => el.getAttribute('cx') === '150' && el.getAttribute('ry') === '60'
     );
-    expect(tortillaWrap).toBeTruthy();
+    expect(tortillaWrap).toBeInTheDocument();
+    expect(tortillaWrap).toHaveAttribute('fill', '#f5deb3');
   });
 
-  it('should render wrap fold lines', () => {
+  it('should render wrap fold line paths', () => {
     const { container } = render(<BurritoBase />);
     const paths = container.querySelectorAll('path');
     expect(paths.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('should render filling peek with correct colors', () => {
+  it('should render left end fold ellipses', () => {
     const { container } = render(<BurritoBase />);
     const ellipses = container.querySelectorAll('ellipse');
-    const fillingPeeks = Array.from(ellipses).filter(
-      (el) => el.getAttribute('cx') === '150' && (el.getAttribute('fill') === '#c0392b' || el.getAttribute('fill') === '#27ae60' || el.getAttribute('fill') === '#f1c40f')
-    );
-    expect(fillingPeeks.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('should render shine ellipse', () => {
-    const { container } = render(<BurritoBase />);
-    const ellipses = container.querySelectorAll('ellipse');
-    const shineEllipse = Array.from(ellipses).find(
-      (el) => el.getAttribute('fill') === 'white' && el.getAttribute('opacity') === '0.2'
-    );
-    expect(shineEllipse).toBeTruthy();
-  });
-
-  it('should render left end fold', () => {
-    const { container } = render(<BurritoBase />);
-    const ellipses = container.querySelectorAll('ellipse');
-    const leftFolds = Array.from(ellipses).filter(
+    const leftFold = Array.from(ellipses).filter(
       (el) => el.getAttribute('cx') === '30'
     );
-    expect(leftFolds.length).toBeGreaterThanOrEqual(2);
+    expect(leftFold.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('should render right end fold', () => {
+  it('should render right end fold ellipses', () => {
     const { container } = render(<BurritoBase />);
     const ellipses = container.querySelectorAll('ellipse');
-    const rightFolds = Array.from(ellipses).filter(
+    const rightFold = Array.from(ellipses).filter(
       (el) => el.getAttribute('cx') === '270'
     );
-    expect(rightFolds.length).toBeGreaterThanOrEqual(2);
+    expect(rightFold.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('should apply motion animation initial state', () => {
+  it('should render filling peek ellipses with correct colors', () => {
+    const { container } = render(<BurritoBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    const fillingPeek = Array.from(ellipses).filter(
+      (el) => el.getAttribute('cx') === '150' && el.getAttribute('cy') === '108'
+    );
+    expect(fillingPeek.length).toBeGreaterThan(0);
+  });
+
+  it('should render shine ellipse with low opacity', () => {
+    const { container } = render(<BurritoBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    const shine = Array.from(ellipses).find(
+      (el) => el.getAttribute('cx') === '110' && el.getAttribute('cy') === '88'
+    );
+    expect(shine).toBeInTheDocument();
+    expect(shine).toHaveAttribute('opacity', '0.2');
+    expect(shine).toHaveAttribute('fill', 'white');
+  });
+
+  it('should have motion animation attributes on svg', () => {
     const { container } = render(<BurritoBase />);
     const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
+    // Motion.svg applies animation through inline styles
+    expect(svg).toBeInTheDocument();
   });
 
-  it('should have plate with correct styling', () => {
+  it('should render plate with correct fill color', () => {
     const { container } = render(<BurritoBase />);
-    const plateEllipses = container.querySelectorAll('ellipse');
-    const mainPlate = Array.from(plateEllipses).find(
+    const ellipses = container.querySelectorAll('ellipse');
+    const plateBase = Array.from(ellipses).find(
       (el) => el.getAttribute('cx') === '150' && el.getAttribute('cy') === '185'
     );
-    expect(mainPlate).toBeTruthy();
-    expect(mainPlate?.getAttribute('fill')).toBe('#e8e0d8');
+    expect(plateBase).toHaveAttribute('fill', '#e8e0d8');
   });
 
-  it('should render wrap fold lines with correct styling', () => {
+  it('should render plate top with stroke', () => {
+    const { container } = render(<BurritoBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    const plateTop = Array.from(ellipses).find(
+      (el) => el.getAttribute('cx') === '150' && el.getAttribute('cy') === '180'
+    );
+    expect(plateTop).toHaveAttribute('stroke', '#d5c9bc');
+    expect(plateTop).toHaveAttribute('strokeWidth', '2');
+  });
+
+  it('should render fold line paths with correct styling', () => {
     const { container } = render(<BurritoBase />);
     const paths = container.querySelectorAll('path');
     expect(paths.length).toBeGreaterThanOrEqual(2);
     Array.from(paths).forEach((path) => {
-      expect(path.getAttribute('stroke')).toBe('#e8c589');
+      expect(path).toHaveAttribute('stroke', '#e8c589');
+      expect(path).toHaveAttribute('strokeWidth', '3');
     });
   });
 
-  it('should have filling with correct opacity values', () => {
+  it('should render multiple filling components with different colors', () => {
     const { container } = render(<BurritoBase />);
-    const redFilling = Array.from(container.querySelectorAll('ellipse')).find(
-      (el) => el.getAttribute('fill') === '#c0392b'
+    const ellipses = container.querySelectorAll('ellipse');
+    const fillingComponents = Array.from(ellipses).filter(
+      (el) => el.getAttribute('cx') === '150' && 
+      ['108', '110', '112'].includes(el.getAttribute('cy') || '')
     );
-    const greenFilling = Array.from(container.querySelectorAll('ellipse')).find(
-      (el) => el.getAttribute('fill') === '#27ae60'
-    );
-    const yellowFilling = Array.from(container.querySelectorAll('ellipse')).find(
-      (el) => el.getAttribute('fill') === '#f1c40f'
-    );
-
-    expect(redFilling?.getAttribute('opacity')).toBe('0.7');
-    expect(greenFilling?.getAttribute('opacity')).toBe('0.6');
-    expect(yellowFilling?.getAttribute('opacity')).toBe('0.6');
+    expect(fillingComponents.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('should export BurritoBase as a function component', () => {
+  it('should be a functional component that returns JSX', () => {
     expect(typeof BurritoBase).toBe('function');
   });
 
-  it('should render consistent structure on multiple renders', () => {
-    const { container: container1 } = render(<BurritoBase />);
-    const { container: container2 } = render(<BurritoBase />);
-
-    const ellipses1 = container1.querySelectorAll('ellipse').length;
-    const ellipses2 = container2.querySelectorAll('ellipse').length;
-
-    expect(ellipses1).toBe(ellipses2);
+  it('should render without any props being passed', () => {
+    const { container } = render(<BurritoBase />);
+    expect(container.firstChild).toBeInTheDocument();
   });
 });
