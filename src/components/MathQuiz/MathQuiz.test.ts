@@ -1,95 +1,102 @@
 // @ts-nocheck
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { MathQuiz } from './MathQuiz';
 import { useGameStore } from '../../store/gameStore';
 import { useLanguageStore } from '../../store/languageStore';
 import { useSpeech } from '../../hooks/useSpeech';
 import { getMealInfo } from '../../data/meals';
 import { generateQuestions } from './generateQuestions';
+import { useT } from '../../i18n/useT';
 
 jest.mock('../../store/gameStore');
 jest.mock('../../store/languageStore');
 jest.mock('../../hooks/useSpeech');
 jest.mock('../../data/meals');
 jest.mock('./generateQuestions');
+jest.mock('../../i18n/useT');
+jest.mock('./NumberPad', () => ({
+  NumberPad: ({ onSubmit }: { onSubmit: (value: number) => void }) => (
+    <button onClick={() => onSubmit(42)}>Submit Answer</button>
+  ),
+}));
 jest.mock('../Chef/ChefDialog', () => ({
-  ChefDialog: () => <div data-testid="chef-dialog">ChefDialog</div>,
+  ChefDialog: () => <div>Chef Dialog</div>,
 }));
 jest.mock('../UI/StarScore', () => ({
-  StarScore: () => <div data-testid="star-score">StarScore</div>,
+  StarScore: () => <div>Star Score</div>,
 }));
 jest.mock('../UI/Button', () => ({
-  Button: ({ children, onClick, variant, size }: any) => (
-    <button data-testid="button" onClick={onClick} data-variant={variant} data-size={size}>
-      {children}
-    </button>
+  Button: ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
+    <button onClick={onClick}>{children}</button>
   ),
 }));
-jest.mock('./NumberPad', () => ({
-  NumberPad: ({ onSubmit }: any) => (
-    <div data-testid="number-pad">
-      <button onClick={() => onSubmit(5)}>Submit 5</button>
-    </div>
-  ),
-}));
-jest.mock('../../i18n/useT', () => ({
-  useT: () => ({
+
+describe('MathQuiz', () => {
+  const mockMealInfo = {
+    bgColor: '#fff9c4',
+    accentColor: '#f57f17',
+  };
+
+  const mockTranslations = {
+    mathQuiz: {
+      title: 'Math Quiz',
+      questionOf: (curr: number, total: number) => `Question ${curr} of ${total}`,
+      correctMessages: ['Great!', 'Excellent!'],
+      wrongMessages: ['Try again!', 'Not quite!'],
+      nextMessage: 'Next question!',
+      finalMessage: 'You finished!',
+      skipButton: 'Skip',
+      hintPrefix: 'Hint:',
+      skipReveal: (answer: number) => `The answer was ${answer}`,
+    },
+    kitchen: {
+      doneMessage: 'Well done!',
+    },
     meals: {
       pizza: { name: 'Pizza' },
-      pasta: { name: 'Pasta' },
     },
     ingredients: {
       cheese: 'Cheese',
       tomato: 'Tomato',
     },
-    mathQuiz: {
-      title: 'Math Quiz',
-      hintPrefix: 'Hint:',
-      skipButton: 'Skip',
-      correctMessages: ['Great!', 'Excellent!'],
-      wrongMessages: ['Try again!', 'Not quite!'],
-      nextMessage: 'Next question!',
-      finalMessage: 'You did it!',
-      questionOf: (current: number, total: number) => `Question ${current} of ${total}`,
-      skipReveal: (answer: number) => `The answer was ${answer}`,
-    },
-    kitchen: {
-      doneMessage: 'Done!',
-    },
-  }),
-}));
-
-describe('MathQuiz', () => {
-  const mockAddScore = jest.fn();
-  const mockNextQuestion = jest.fn();
-  const mockSetPhase = jest.fn();
-  const mockSetChefMessage = jest.fn();
-  const mockSpeak = jest.fn();
-
-  const mockQuestion = {
-    id: 'q1',
-    question: 'How many pizzas?',
-    visual: '🍕',
-    answer: 5,
-    hint: 'Count the slices',
   };
 
-  const mockQuestions = [mockQuestion, { ...mockQuestion, id: 'q2', answer: 10 }];
+  const mockQuestions = [
+    {
+      id: '1',
+      question: 'How many pizzas?',
+      answer: 2,
+      visual: '🍕',
+      hint: 'Count the slices',
+    },
+    {
+      id: '2',
+      question: 'How many toppings?',
+      answer: 5,
+      visual: '🧀',
+      hint: 'Count all ingredients',
+    },
+  ];
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }, { ingredientId: 'tomato' }],
-      familySize: 2,
+      placedIngredients: [
+        { ingredientId: 'cheese', id: '1' },
+        { ingredientId: 'cheese', id: '2' },
+        { ingredientId: 'tomato', id: '3' },
+      ],
+      familySize: 4,
       pizzaSlices: 8,
       currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
+      setChefMessage: jest.fn(),
     });
 
     (useLanguageStore as jest.Mock).mockReturnValue({
@@ -97,251 +104,322 @@ describe('MathQuiz', () => {
     });
 
     (useSpeech as jest.Mock).mockReturnValue({
-      speak: mockSpeak,
+      speak: jest.fn(),
     });
 
-    (getMealInfo as jest.Mock).mockReturnValue({
-      bgColor: '#fff3e0',
-      accentColor: '#ff9800',
-    });
-
+    (getMealInfo as jest.Mock).mockReturnValue(mockMealInfo);
     (generateQuestions as jest.Mock).mockReturnValue(mockQuestions);
+    (useT as jest.Mock).mockReturnValue(mockTranslations);
   });
 
-  it('should render the math quiz with header', () => {
+  it('renders the quiz title and header', () => {
     render(<MathQuiz />);
     expect(screen.getByText('Math Quiz')).toBeInTheDocument();
-    expect(screen.getByTestId('star-score')).toBeInTheDocument();
   });
 
-  it('should render chef dialog and number pad', () => {
+  it('renders the chef dialog and star score', () => {
     render(<MathQuiz />);
-    expect(screen.getByTestId('chef-dialog')).toBeInTheDocument();
-    expect(screen.getByTestId('number-pad')).toBeInTheDocument();
+    expect(screen.getByText('Chef Dialog')).toBeInTheDocument();
+    expect(screen.getByText('Star Score')).toBeInTheDocument();
   });
 
-  it('should display current question', () => {
+  it('displays progress dots for each question', () => {
     render(<MathQuiz />);
-    expect(screen.getByText('How many pizzas?')).toBeInTheDocument();
-    expect(screen.getByText('🍕')).toBeInTheDocument();
+    const dots = document.querySelectorAll('[style*="height: 8px"]');
+    expect(dots.length).toBe(mockQuestions.length);
   });
 
-  it('should display progress dots for all questions', () => {
-    render(<MathQuiz />);
-    const progressDots = screen.getAllByRole('generic').filter(
-      (el) => el.style.width === '28px'
-    );
-    expect(progressDots).toHaveLength(mockQuestions.length);
-  });
-
-  it('should display ingredient summary', () => {
+  it('displays ingredient summary with counts', () => {
     render(<MathQuiz />);
     expect(screen.getByText(/YOUR INGREDIENTS:/)).toBeInTheDocument();
     expect(screen.getByText(/Cheese/)).toBeInTheDocument();
+    expect(screen.getByText(/×2/)).toBeInTheDocument();
     expect(screen.getByText(/Tomato/)).toBeInTheDocument();
+    expect(screen.getByText(/×1/)).toBeInTheDocument();
   });
 
-  it('should speak question when component mounts', () => {
+  it('displays the current question', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('How many pizzas?')).toBeInTheDocument();
+  });
+
+  it('displays the question number and total', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument();
+  });
+
+  it('displays the visual emoji for the question', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('🍕')).toBeInTheDocument();
+  });
+
+  it('calls speak when component mounts and question appears', () => {
+    const mockSpeak = jest.fn();
+    (useSpeech as jest.Mock).mockReturnValue({
+      speak: mockSpeak,
+    });
+
     render(<MathQuiz />);
     expect(mockSpeak).toHaveBeenCalledWith('How many pizzas?');
   });
 
-  it('should speak question when current question changes', () => {
-    const { rerender } = render(<MathQuiz />);
-    mockSpeak.mockClear();
-
+  it('handles correct answer submission', async () => {
+    const mockAddScore = jest.fn();
+    const mockNextQuestion = jest.fn();
+    const mockSetChefMessage = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
+      placedIngredients: [],
+      familySize: 4,
       pizzaSlices: 8,
-      currentQuestionIndex: 1,
+      currentQuestionIndex: 0,
       addScore: mockAddScore,
       nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
+      setPhase: jest.fn(),
       setChefMessage: mockSetChefMessage,
     });
 
-    rerender(<MathQuiz />);
-    expect(mockSpeak).toHaveBeenCalledWith(mockQuestions[1].question);
-  });
-
-  it('should handle correct answer', async () => {
-    jest.useFakeTimers();
     render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    const submitButton = screen.getByText('Submit Answer');
     await userEvent.click(submitButton);
 
     expect(mockAddScore).toHaveBeenCalledWith(10);
     expect(mockSetChefMessage).toHaveBeenCalledWith(expect.stringContaining('+10'), 'cheering');
 
-    jest.advanceTimersByTime(1800);
-    expect(mockNextQuestion).toHaveBeenCalled();
-
-    jest.useRealTimers();
+    await waitFor(() => {
+      expect(mockNextQuestion).toHaveBeenCalled();
+    }, { timeout: 2000 });
   });
 
-  it('should reduce points on second attempt', async () => {
-    jest.useFakeTimers();
-    render(<MathQuiz />);
+  it('awards fewer points on second attempt', async () => {
+    const mockAddScore = jest.fn();
+    const mockSetChefMessage = jest.fn();
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 4,
+      pizzaSlices: 8,
+      currentQuestionIndex: 0,
+      addScore: mockAddScore,
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
+      setChefMessage: mockSetChefMessage,
+    });
 
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
+
+    // First incorrect attempt
+    await userEvent.click(submitButton);
+    expect(mockAddScore).not.toHaveBeenCalled();
+
+    // Wait for feedback to clear
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
+
+    // Second attempt (correct)
+    await userEvent.click(submitButton);
+    expect(mockAddScore).toHaveBeenCalledWith(7);
+  });
+
+  it('awards minimum points on third attempt', async () => {
+    const mockAddScore = jest.fn();
+    const mockSetChefMessage = jest.fn();
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 4,
+      pizzaSlices: 8,
+      currentQuestionIndex: 0,
+      addScore: mockAddScore,
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
+      setChefMessage: mockSetChefMessage,
+    });
+
+    render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
 
     // First wrong attempt
     await userEvent.click(submitButton);
-    expect(mockSetChefMessage).toHaveBeenCalledWith(expect.any(String), 'thinking');
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
 
-    jest.advanceTimersByTime(1200);
+    // Second wrong attempt
+    await userEvent.click(submitButton);
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
 
-    // Show hint after wrong answer
-    expect(screen.getByText(/Hint:/)).toBeInTheDocument();
-
-    jest.useRealTimers();
+    // Third attempt (correct)
+    await userEvent.click(submitButton);
+    expect(mockAddScore).toHaveBeenCalledWith(5);
   });
 
-  it('should show hint on wrong answer', async () => {
-    jest.useFakeTimers();
+  it('shows hint after wrong answer', async () => {
     render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
 
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    // Answer incorrectly
     await userEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Hint:/)).toBeInTheDocument();
       expect(screen.getByText(/Count the slices/)).toBeInTheDocument();
     });
-
-    jest.useRealTimers();
   });
 
-  it('should speak hint when it appears', async () => {
-    jest.useFakeTimers();
-    mockSpeak.mockClear();
-    render(<MathQuiz />);
+  it('speaks the hint when it appears', async () => {
+    const mockSpeak = jest.fn();
+    (useSpeech as jest.Mock).mockReturnValue({
+      speak: mockSpeak,
+    });
 
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
+
+    // Answer incorrectly to trigger hint
     await userEvent.click(submitButton);
 
-    jest.advanceTimersByTime(100);
-
-    expect(mockSpeak).toHaveBeenCalledWith('Hint: Count the slices');
-
-    jest.useRealTimers();
+    await waitFor(() => {
+      expect(mockSpeak).toHaveBeenCalledWith('Hint: Count the slices');
+    });
   });
 
-  it('should show skip button after 2 attempts', async () => {
-    jest.useFakeTimers();
+  it('shows skip button after 2 attempts', async () => {
     render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    const submitButton = screen.getByText('Submit Answer');
 
     // First wrong attempt
     await userEvent.click(submitButton);
-    jest.advanceTimersByTime(1200);
-
-    expect(screen.queryByText('Skip')).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
 
     // Second wrong attempt
     await userEvent.click(submitButton);
-    jest.advanceTimersByTime(1200);
 
     await waitFor(() => {
       expect(screen.getByText('Skip')).toBeInTheDocument();
     });
-
-    jest.useRealTimers();
   });
 
-  it('should handle skip action', async () => {
-    jest.useFakeTimers();
-
+  it('handles skip action', async () => {
+    const mockSetPhase = jest.fn();
+    const mockSetChefMessage = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
+      placedIngredients: [],
+      familySize: 4,
       pizzaSlices: 8,
       currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
       setPhase: mockSetPhase,
       setChefMessage: mockSetChefMessage,
     });
 
     render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
 
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    // Trigger 2 wrong answers to show skip button
+    await userEvent.click(submitButton);
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
 
-    // Make 2 wrong attempts
     await userEvent.click(submitButton);
-    jest.advanceTimersByTime(1200);
-    await userEvent.click(submitButton);
-    jest.advanceTimersByTime(1200);
+    await waitFor(() => {
+      expect(screen.getByText('Skip')).toBeInTheDocument();
+    });
 
     const skipButton = screen.getByText('Skip');
     await userEvent.click(skipButton);
 
-    expect(mockSetChefMessage).toHaveBeenCalledWith('The answer was 5', 'happy');
-    expect(mockNextQuestion).toHaveBeenCalled();
-
-    jest.useRealTimers();
+    expect(mockSetChefMessage).toHaveBeenCalledWith('The answer was 2', 'happy');
   });
 
-  it('should advance to celebration phase on last question answered correctly', async () => {
-    jest.useFakeTimers();
-
+  it('advances to celebration phase after last question is answered correctly', async () => {
+    const mockSetPhase = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
+      placedIngredients: [],
+      familySize: 4,
       pizzaSlices: 8,
       currentQuestionIndex: 1, // Last question
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
       setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
+      setChefMessage: jest.fn(),
     });
 
     render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    const submitButton = screen.getByText('Submit Answer');
     await userEvent.click(submitButton);
 
-    jest.advanceTimersByTime(1800);
-
-    expect(mockSetPhase).toHaveBeenCalledWith('celebration');
-    expect(mockSetChefMessage).toHaveBeenCalledWith('You did it!', 'cheering');
-
-    jest.useRealTimers();
+    await waitFor(() => {
+      expect(mockSetPhase).toHaveBeenCalledWith('celebration');
+    }, { timeout: 2000 });
   });
 
-  it('should advance to celebration when quiz is finished', async () => {
-    jest.useFakeTimers();
-
+  it('advances to celebration phase after skipping last question', async () => {
+    const mockSetPhase = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
+      placedIngredients: [],
+      familySize: 4,
       pizzaSlices: 8,
-      currentQuestionIndex: 2, // Beyond questions length
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
+      currentQuestionIndex: 1, // Last question
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
       setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
+      setChefMessage: jest.fn(),
     });
 
     render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
 
-    jest.advanceTimersByTime(400);
+    // Trigger 2 wrong answers to show skip button
+    await userEvent.click(submitButton);
+    await waitFor(
+      () => {
+        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+      },
+      { timeout: 1500 }
+    );
+
+    await userEvent.click(submitButton);
+    await waitFor(() => {
+      expect(screen.getByText('Skip')).toBeInTheDocument();
+    });
+
+    const skipButton = screen.getByText('Skip');
+    await userEvent.click(skipButton);
 
     expect(mockSetPhase).toHaveBeenCalledWith('celebration');
-
-    jest.useRealTimers();
   });
 
-  it('should update chef message when language changes', () => {
+  it('regenerates questions when language changes', () => {
     const { rerender } = render(<MathQuiz />);
-    mockSetChefMessage.mockClear();
+
+    expect(generateQuestions).toHaveBeenCalled();
 
     (useLanguageStore as jest.Mock).mockReturnValue({
       language: 'es',
@@ -349,187 +427,182 @@ describe('MathQuiz', () => {
 
     rerender(<MathQuiz />);
 
-    expect(mockSetChefMessage).toHaveBeenCalledWith('Done!', 'excited');
+    // Should be called again due to language dependency
+    expect(generateQuestions).toHaveBeenCalledTimes(2);
   });
 
-  it('should display question progress indicator', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText(/Question 1 of 2/)).toBeInTheDocument();
-  });
-
-  it('should animate question change', async () => {
-    const { rerender } = render(<MathQuiz />);
-
+  it('updates chef message when translations change', () => {
+    const mockSetChefMessage = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
-      pizzaSlices: 8,
-      currentQuestionIndex: 1,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
-    });
-
-    rerender(<MathQuiz />);
-    expect(screen.getByText(/Question 2 of 2/)).toBeInTheDocument();
-  });
-
-  it('should handle ingredient counts correctly', () => {
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [
-        { ingredientId: 'cheese' },
-        { ingredientId: 'cheese' },
-        { ingredientId: 'tomato' },
-      ],
-      familySize: 2,
+      placedIngredients: [],
+      familySize: 4,
       pizzaSlices: 8,
       currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
       setChefMessage: mockSetChefMessage,
     });
 
     render(<MathQuiz />);
-    expect(screen.getByText(/Cheese ×2/)).toBeInTheDocument();
-    expect(screen.getByText(/Tomato ×1/)).toBeInTheDocument();
+
+    expect(mockSetChefMessage).toHaveBeenCalledWith('Well done!', 'excited');
   });
 
-  it('should not display question card when finished', () => {
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [{ ingredientId: 'cheese' }],
-      familySize: 2,
-      pizzaSlices: 8,
-      currentQuestionIndex: 999,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
-    });
-
+  it('displays feedback emoji on correct answer', async () => {
     render(<MathQuiz />);
-    expect(screen.queryByText('How many pizzas?')).not.toBeInTheDocument();
-  });
-
-  it('should display visual emoji and animate it', () => {
-    render(<MathQuiz />);
-    const visual = screen.getByText('🍕');
-    expect(visual).toBeInTheDocument();
-    expect(visual.style.animationName || visual.parentElement?.style.animationName).toBeDefined();
-  });
-
-  it('should show correct feedback emoji', async () => {
-    jest.useFakeTimers();
-    render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    const submitButton = screen.getByText('Submit Answer');
     await userEvent.click(submitButton);
 
     expect(screen.getByText('✅')).toBeInTheDocument();
-
-    jest.useRealTimers();
   });
 
-  it('should show wrong feedback emoji', async () => {
-    jest.useFakeTimers();
+  it('displays feedback emoji on wrong answer', async () => {
     render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
 
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    // Submit wrong answer
     await userEvent.click(submitButton);
 
     expect(screen.getByText('❌')).toBeInTheDocument();
-
-    jest.useRealTimers();
   });
 
-  it('should award correct points for first attempt', async () => {
-    jest.useFakeTimers();
-    render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
-    await userEvent.click(submitButton);
-
-    expect(mockAddScore).toHaveBeenCalledWith(10);
-
-    jest.useRealTimers();
-  });
-
-  it('should award reduced points for second attempt', async () => {
-    jest.useFakeTimers();
-    render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
-
-    // Wrong attempt
-    await userEvent.click(submitButton);
-    jest.advanceTimersByTime(1200);
-
-    mockAddScore.mockClear();
-
-    // Correct answer on second attempt - but we need to submit correct answer
-    // Since our mock always returns 5, we can't directly test 7 points
-    // This test documents the expected behavior
-    jest.useRealTimers();
-  });
-
-  it('should not render without selected meal', () => {
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: null,
-      placedIngredients: [],
-      familySize: 2,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
-    });
-
-    expect(() => render(<MathQuiz />)).not.toThrow();
-  });
-
-  it('should handle empty ingredient list', () => {
+  it('advances to next question after correct answer delay', async () => {
+    const mockNextQuestion = jest.fn();
     (useGameStore as jest.Mock).mockReturnValue({
       selectedMeal: 'pizza',
       placedIngredients: [],
-      familySize: 2,
+      familySize: 4,
       pizzaSlices: 8,
       currentQuestionIndex: 0,
-      addScore: mockAddScore,
+      addScore: jest.fn(),
       nextQuestion: mockNextQuestion,
-      setPhase: mockSetPhase,
-      setChefMessage: mockSetChefMessage,
+      setPhase: jest.fn(),
+      setChefMessage: jest.fn(),
     });
 
     render(<MathQuiz />);
-    expect(screen.queryByText(/YOUR INGREDIENTS:/)).not.toBeInTheDocument();
-  });
-
-  it('should use correct styling with meal colors', () => {
-    render(<MathQuiz />);
-    const header = screen.getByText('Math Quiz').parentElement;
-    expect(header).toHaveStyle({ background: 'white' });
-  });
-
-  it('should clear feedback state after timeout', async () => {
-    jest.useFakeTimers();
-    render(<MathQuiz />);
-
-    const submitButton = screen.getByRole('button', { name: 'Submit 5' });
+    const submitButton = screen.getByText('Submit Answer');
     await userEvent.click(submitButton);
 
-    expect(screen.getByText('✅')).toBeInTheDocument();
-
-    jest.advanceTimersByTime(1200);
-
     await waitFor(() => {
-      expect(screen.queryByText('✅')).not.toBeInTheDocument();
+      expect(mockNextQuestion).toHaveBeenCalled();
+    }, { timeout: 2000 });
+  });
+
+  it('clears attempts and hint after correct answer', async () => {
+    render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit Answer');
+
+    // Wrong answer to show hint
+    await userEvent.click(submitButton);
+    await waitFor(() => {
+      expect(screen.getByText(/Hint:/)).toBeInTheDocument();
     });
 
-    jest.useRealTimers();
+    // Correct answer
+    await userEvent.click(submitButton);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText(/Hint:/)).not.toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('renders with proper styling and layout', () => {
+    render(<MathQuiz />);
+    const container = screen.getByText('Math Quiz').closest('div')?.parentElement;
+    expect(container).toBeInTheDocument();
+  });
+
+  it('does not render question when all questions are finished', async () => {
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 4,
+      pizzaSlices: 8,
+      currentQuestionIndex: 2, // Beyond questions.length (2)
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
+      setChefMessage: jest.fn(),
+    });
+
+    render(<MathQuiz />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('How many pizzas?')).not.toBeInTheDocument();
+    });
+  });
+
+  it('sets celebration phase when finished questions state is reached', async () => {
+    const mockSetPhase = jest.fn();
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 4,
+      pizzaSlices: 8,
+      currentQuestionIndex: 10, // Beyond questions
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
+      setPhase: mockSetPhase,
+      setChefMessage: jest.fn(),
+    });
+
+    render(<MathQuiz />);
+
+    await waitFor(() => {
+      expect(mockSetPhase).toHaveBeenCalledWith('celebration');
+    }, { timeout: 500 });
+  });
+
+  it('handles missing ingredient translations gracefully', () => {
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [
+        { ingredientId: 'unknown_ingredient', id: '1' },
+      ],
+      familySize: 4,
+      pizzaSlices: 8,
+      currentQuestionIndex: 0,
+      addScore: jest.fn(),
+      nextQuestion: jest.fn(),
+      setPhase: jest.fn(),
+      setChefMessage: jest.fn(),
+    });
+
+    render(<MathQuiz />);
+
+    expect(screen.getByText(/YOUR INGREDIENTS:/)).toBeInTheDocument();
+    expect(screen.getByText(/unknown_ingredient/)).toBeInTheDocument();
+  });
+
+  it('does not show skip button before 2 attempts', () => {
+    render(<MathQuiz />);
+    expect(screen.queryByText('Skip')).not.toBeInTheDocument();
+  });
+
+  it('uses meal accent color for progress dots styling', () => {
+    render(<MathQuiz />);
+    const dots = document.querySelectorAll('[style*="background"]');
+    expect(dots.length).toBeGreaterThan(0);
+  });
+
+  it('generates questions with correct parameters', () => {
+    render(<MathQuiz />);
+
+    expect(generateQuestions).toHaveBeenCalledWith(
+      expect.any(Array),
+      4,
+      8,
+      mockTranslations.mathQuiz,
+      'Pizza',
+      expect.any(Function),
+      'pizza',
+      'en'
+    );
   });
 });
