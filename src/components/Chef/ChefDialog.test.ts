@@ -8,279 +8,374 @@ jest.mock('../../store/gameStore');
 jest.mock('../../hooks/useSpeech');
 jest.mock('./ChefCharacter', () => ({
   ChefCharacter: ({ emotion, size }: { emotion: string; size: number }) => (
-    <div data-testid="chef-character" data-emotion={emotion} data-size={size} />
+    <div data-testid="chef-character" data-emotion={emotion} data-size={size}>
+      Chef
+    </div>
   ),
-}));
-jest.mock('framer-motion', () => ({
-  ...jest.requireActual('framer-motion'),
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: ({
-      children,
-      style,
-      ...props
-    }: {
-      children: React.ReactNode;
-      style?: Record<string, unknown>;
-      [key: string]: unknown;
-    }) => (
-      <div style={style} data-testid="motion-div" {...props}>
-        {children}
-      </div>
-    ),
-  },
 }));
 
 describe('ChefDialog', () => {
   const mockSpeak = jest.fn();
-  const mockUseGameStore = useGameStore as jest.MockedFunction<typeof useGameStore>;
-  const mockUseSpeech = useSpeech as jest.MockedFunction<typeof useSpeech>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSpeech.mockReturnValue({ speak: mockSpeak });
-    mockUseGameStore.mockReturnValue({
-      chefMessage: 'Hello!',
-      chefEmotion: 'happy',
-    } as any);
+    (useSpeech as jest.Mock).mockReturnValue({ speak: mockSpeak });
   });
 
   describe('rendering', () => {
-    it('should render the ChefDialog component', () => {
+    it('should render the chef character', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
       render(<ChefDialog />);
+
       expect(screen.getByTestId('chef-character')).toBeInTheDocument();
     });
 
     it('should render the chef message', () => {
-      mockUseGameStore.mockReturnValue({
+      (useGameStore as jest.Mock).mockReturnValue({
         chefMessage: 'Welcome to the kitchen!',
         chefEmotion: 'happy',
-      } as any);
+      });
 
       render(<ChefDialog />);
+
       expect(screen.getByText('Welcome to the kitchen!')).toBeInTheDocument();
     });
 
-    it('should render speech bubble styling elements', () => {
-      render(<ChefDialog />);
-      const motionDiv = screen.getByTestId('motion-div');
-      expect(motionDiv).toBeInTheDocument();
+    it('should render speech bubble with correct styling', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
+      });
+
+      const { container } = render(<ChefDialog />);
+      const speechBubble = container.querySelector('div[style*="background"]');
+
+      expect(speechBubble).toHaveStyle({
+        background: 'white',
+        borderRadius: '16px',
+        border: '2px solid #ff6b35',
+      });
+    });
+
+    it('should render speech bubble tail elements', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
+      });
+
+      const { container } = render(<ChefDialog />);
+      const divs = container.querySelectorAll('div[style*="position: absolute"]');
+
+      expect(divs.length).toBeGreaterThanOrEqual(2);
     });
   });
 
   describe('compact mode', () => {
-    it('should render with compact styles when compact prop is true', () => {
+    it('should apply compact styles when compact is true', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
       render(<ChefDialog compact={true} />);
+
       const chefCharacter = screen.getByTestId('chef-character');
       expect(chefCharacter).toHaveAttribute('data-size', '70');
     });
 
-    it('should render with default styles when compact prop is false', () => {
+    it('should apply normal styles when compact is false', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
       render(<ChefDialog compact={false} />);
+
       const chefCharacter = screen.getByTestId('chef-character');
       expect(chefCharacter).toHaveAttribute('data-size', '100');
     });
 
-    it('should render with compact styles by default', () => {
+    it('should apply default normal styles when compact is not provided', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
       render(<ChefDialog />);
+
       const chefCharacter = screen.getByTestId('chef-character');
       expect(chefCharacter).toHaveAttribute('data-size', '100');
+    });
+
+    it('should use compact padding when compact is true', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
+      const { container } = render(<ChefDialog compact={true} />);
+      const outerDiv = container.firstChild as HTMLElement;
+
+      expect(outerDiv).toHaveStyle('padding: 8px 12px');
+    });
+
+    it('should use normal padding when compact is false', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
+      const { container } = render(<ChefDialog compact={false} />);
+      const outerDiv = container.firstChild as HTMLElement;
+
+      expect(outerDiv).toHaveStyle('padding: 12px 16px');
     });
   });
 
-  describe('chef character', () => {
-    it('should pass emotion from store to ChefCharacter', () => {
-      mockUseGameStore.mockReturnValue({
+  describe('chef emotion', () => {
+    it('should pass the correct emotion to ChefCharacter', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
         chefMessage: 'Hello!',
-        chefEmotion: 'excited',
-      } as any);
+        chefEmotion: 'sad',
+      });
 
       render(<ChefDialog />);
-      const chefCharacter = screen.getByTestId('chef-character');
-      expect(chefCharacter).toHaveAttribute('data-emotion', 'excited');
+
+      expect(screen.getByTestId('chef-character')).toHaveAttribute(
+        'data-emotion',
+        'sad'
+      );
     });
 
-    it('should pass correct size to ChefCharacter in normal mode', () => {
-      render(<ChefDialog compact={false} />);
-      const chefCharacter = screen.getByTestId('chef-character');
-      expect(chefCharacter).toHaveAttribute('data-size', '100');
-    });
+    it('should update ChefCharacter emotion when chefEmotion changes', () => {
+      const { rerender } = render(<ChefDialog />);
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
 
-    it('should pass correct size to ChefCharacter in compact mode', () => {
-      render(<ChefDialog compact={true} />);
-      const chefCharacter = screen.getByTestId('chef-character');
-      expect(chefCharacter).toHaveAttribute('data-size', '70');
+      rerender(<ChefDialog />);
+
+      expect(screen.getByTestId('chef-character')).toHaveAttribute(
+        'data-emotion',
+        'happy'
+      );
     });
   });
 
   describe('speech functionality', () => {
-    it('should call speak when chefMessage changes', async () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello chef!',
+    it('should call speak when chefMessage is provided', async () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello there!',
         chefEmotion: 'happy',
-      } as any);
+      });
 
       render(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('Hello chef!');
+        expect(mockSpeak).toHaveBeenCalledWith('Hello there!');
       });
     });
 
-    it('should not call speak when chefMessage is empty', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: '',
-        chefEmotion: 'happy',
-      } as any);
-
-      render(<ChefDialog />);
-      expect(mockSpeak).not.toHaveBeenCalled();
-    });
-
-    it('should call speak when chefMessage updates', async () => {
+    it('should call speak when chefMessage changes', async () => {
       const { rerender } = render(<ChefDialog />);
-
-      expect(mockSpeak).toHaveBeenCalledWith('Hello!');
-      jest.clearAllMocks();
-
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'New message!',
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'First message',
         chefEmotion: 'happy',
-      } as any);
+      });
 
       rerender(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('New message!');
+        expect(mockSpeak).toHaveBeenCalledWith('First message');
+      });
+
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Second message',
+        chefEmotion: 'happy',
+      });
+
+      rerender(<ChefDialog />);
+
+      await waitFor(() => {
+        expect(mockSpeak).toHaveBeenCalledWith('Second message');
       });
     });
 
-    it('should handle special characters in messages', async () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello! How are you? 👨‍🍳',
+    it('should not call speak if chefMessage is empty', async () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: '',
         chefEmotion: 'happy',
-      } as any);
+      });
 
       render(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('Hello! How are you? 👨‍🍳');
+        expect(mockSpeak).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should not call speak if chefMessage is undefined', async () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: undefined,
+        chefEmotion: 'happy',
+      });
+
+      render(<ChefDialog />);
+
+      await waitFor(() => {
+        expect(mockSpeak).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should not call speak if chefMessage is null', async () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: null,
+        chefEmotion: 'happy',
+      });
+
+      render(<ChefDialog />);
+
+      await waitFor(() => {
+        expect(mockSpeak).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('styling', () => {
-    it('should have correct container styles', () => {
+  describe('layout and styling', () => {
+    it('should have flexbox layout with correct alignment', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Hello!',
+        chefEmotion: 'happy',
+      });
+
       const { container } = render(<ChefDialog />);
-      const wrapper = container.firstChild as HTMLElement;
+      const outerDiv = container.firstChild as HTMLElement;
 
-      expect(wrapper).toHaveStyle({
+      expect(outerDiv).toHaveStyle({
         display: 'flex',
         alignItems: 'flex-end',
         gap: '12px',
-        padding: '12px 16px',
       });
     });
 
-    it('should have compact container styles when compact is true', () => {
-      const { container } = render(<ChefDialog compact={true} />);
-      const wrapper = container.firstChild as HTMLElement;
+    it('should display message with correct font styling', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
+      });
 
-      expect(wrapper).toHaveStyle({
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: '12px',
-        padding: '8px 12px',
+      const { container } = render(<ChefDialog />);
+      const speechBubble = container.querySelector('div[style*="fontSize"]');
+
+      expect(speechBubble).toHaveStyle({
+        color: '#2c2c2c',
+        fontWeight: '500',
+        lineHeight: '1.5',
       });
     });
 
-    it('should have correct message bubble styles', () => {
-      render(<ChefDialog />);
-      const motionDiv = screen.getByTestId('motion-div');
+    it('should have shadow and border on message bubble', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
+      });
 
-      const styles = motionDiv.getAttribute('style');
-      expect(styles).toContain('background: white');
-      expect(styles).toContain('border-radius: 16px');
-      expect(styles).toContain('box-shadow: 0 4px 20px rgba(0,0,0,0.12)');
-      expect(styles).toContain('border: 2px solid #ff6b35');
+      const { container } = render(<ChefDialog />);
+      const speechBubble = container.querySelector('div[style*="boxShadow"]');
+
+      expect(speechBubble).toHaveStyle({
+        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+        border: '2px solid #ff6b35',
+      });
+    });
+
+    it('should set maxWidth on message bubble', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
+      });
+
+      const { container } = render(<ChefDialog />);
+      const speechBubble = container.querySelector('div[style*="maxWidth"]');
+
+      expect(speechBubble).toHaveStyle('maxWidth: 320px');
     });
   });
 
   describe('edge cases', () => {
     it('should handle very long messages', () => {
-      const longMessage = 'A'.repeat(500);
-      mockUseGameStore.mockReturnValue({
+      const longMessage = 'This is a very long message that should still render correctly in the speech bubble.'.repeat(
+        3
+      );
+      (useGameStore as jest.Mock).mockReturnValue({
         chefMessage: longMessage,
         chefEmotion: 'happy',
-      } as any);
+      });
 
       render(<ChefDialog />);
+
       expect(screen.getByText(longMessage)).toBeInTheDocument();
     });
 
-    it('should handle null-like chefMessage from store', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: null,
+    it('should handle special characters in message', () => {
+      const specialMessage = 'Hello! @#$%^&*() "quoted" \'single\'';
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: specialMessage,
         chefEmotion: 'happy',
-      } as any);
-
-      render(<ChefDialog />);
-      expect(mockSpeak).not.toHaveBeenCalled();
-    });
-
-    it('should handle undefined chefEmotion', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello!',
-        chefEmotion: undefined,
-      } as any);
-
-      render(<ChefDialog />);
-      const chefCharacter = screen.getByTestId('chef-character');
-      expect(chefCharacter).toHaveAttribute('data-emotion', 'undefined');
-    });
-
-    it('should handle rapid message changes', async () => {
-      const { rerender } = render(<ChefDialog />);
-
-      const messages = ['First', 'Second', 'Third'];
-      for (const message of messages) {
-        mockUseGameStore.mockReturnValue({
-          chefMessage: message,
-          chefEmotion: 'happy',
-        } as any);
-        rerender(<ChefDialog />);
-      }
-
-      await waitFor(() => {
-        expect(mockSpeak).toHaveBeenLastCalledWith('Third');
       });
-    });
-
-    it('should render message with newlines', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello\nWorld',
-        chefEmotion: 'happy',
-      } as any);
 
       render(<ChefDialog />);
-      expect(screen.getByText('Hello\nWorld')).toBeInTheDocument();
+
+      expect(screen.getByText(specialMessage)).toBeInTheDocument();
     });
-  });
 
-  describe('motion animation', () => {
-    it('should use chefMessage as key for animation', () => {
-      const { rerender } = render(<ChefDialog />);
-      let motionDiv = screen.getByTestId('motion-div');
-      expect(motionDiv).toBeInTheDocument();
-
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Different message',
+    it('should handle emoji in message', () => {
+      const emojiMessage = 'Delicious! 🍽️😋👨‍🍳';
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: emojiMessage,
         chefEmotion: 'happy',
-      } as any);
+      });
 
-      rerender(<ChefDialog />);
-      motionDiv = screen.getByTestId('motion-div');
-      expect(motionDiv).toBeInTheDocument();
+      render(<ChefDialog />);
+
+      expect(screen.getByText(emojiMessage)).toBeInTheDocument();
+    });
+
+    it('should handle whitespace in message', () => {
+      const whitespaceMessage = '   Hello   World   ';
+      (useGameStore as jest.Mock).mockReturnValue({
+        chefMessage: whitespaceMessage,
+        chefEmotion: 'happy',
+      });
+
+      render(<ChefDialog />);
+
+      expect(screen.getByText(whitespaceMessage)).toBeInTheDocument();
+    });
+
+    it('should handle different emotion values', () => {
+      const emotions = ['happy', 'sad', 'angry', 'confused', 'excited'];
+
+      emotions.forEach((emotion) => {
+        const { unmount } = render(<ChefDialog />);
+        (useGameStore as jest.Mock).mockReturnValue({
+          chefMessage: 'Test',
+          chefEmotion: emotion,
+        });
+
+        render(<ChefDialog />);
+        expect(screen.getByTestId('chef-character')).toHaveAttribute(
+          'data-emotion',
+          emotion
+        );
+
+        unmount();
+      });
     });
   });
 });
