@@ -2,8 +2,8 @@
 import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SaladAssembly } from '../src/components/Kitchen/SaladAssembly';
-import type { PlacedIngredient } from '../src/types';
+import { SaladAssembly } from './SaladAssembly';
+import type { PlacedIngredient } from '../../types';
 
 // Mock framer-motion to avoid animation issues in tests
 jest.mock('framer-motion', () => ({
