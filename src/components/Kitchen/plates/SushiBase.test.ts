@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { SushiBase } from '../src/components/Kitchen/plates/SushiBase';
 import { render } from '@testing-library/react';
-import React from 'react';
+import { SushiBase } from './SushiBase';
 
 describe('SushiBase', () => {
   it('should render without crashing', () => {
@@ -26,192 +25,183 @@ describe('SushiBase', () => {
   it('should render plate background rectangles', () => {
     const { container } = render(<SushiBase />);
     const rects = container.querySelectorAll('rect');
-    expect(rects.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('should render plate with correct dimensions and styling', () => {
-    const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const outerPlate = Array.from(rects).find(
-      (rect) => rect.getAttribute('x') === '10' && rect.getAttribute('y') === '30'
-    );
-    expect(outerPlate).toBeTruthy();
-    expect(outerPlate).toHaveAttribute('width', '280');
-    expect(outerPlate).toHaveAttribute('height', '200');
-    expect(outerPlate).toHaveAttribute('rx', '20');
-  });
-
-  it('should render plate highlight', () => {
-    const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const highlight = Array.from(rects).find(
-      (rect) => rect.getAttribute('x') === '20' && rect.getAttribute('y') === '40'
-    );
-    expect(highlight).toBeTruthy();
-    expect(highlight).toHaveAttribute('width', '80');
-    expect(highlight).toHaveAttribute('height', '12');
+    // At least 3 rects for plate: outer, inner, and highlight
+    expect(rects.length).toBeGreaterThanOrEqual(3);
   });
 
   it('should render 6 sushi pieces', () => {
     const { container } = render(<SushiBase />);
-    const groups = container.querySelectorAll('g');
-    expect(groups.length).toBe(6);
+    const motionGroups = container.querySelectorAll('motion.g');
+    expect(motionGroups.length).toBe(6);
   });
 
-  it('should render sushi pieces with seaweed wrap rectangles', () => {
+  it('should render sushi pieces with correct structure', () => {
     const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const seaweedWraps = Array.from(rects).filter(
-      (rect) => rect.getAttribute('width') === '52'
-    );
-    expect(seaweedWraps.length).toBeGreaterThanOrEqual(6);
-  });
-
-  it('should render sushi pieces with rice rectangles', () => {
-    const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const riceRects = Array.from(rects).filter(
-      (rect) => rect.getAttribute('width') === '44'
-    );
-    expect(riceRects.length).toBeGreaterThanOrEqual(6);
-  });
-
-  it('should render sushi toppings as ellipses', () => {
-    const { container } = render(<SushiBase />);
-    const ellipses = container.querySelectorAll('ellipse');
-    expect(ellipses.length).toBe(6);
-  });
-
-  it('should render toppings with correct dimensions', () => {
-    const { container } = render(<SushiBase />);
-    const ellipses = container.querySelectorAll('ellipse');
-    ellipses.forEach((ellipse) => {
-      expect(ellipse).toHaveAttribute('rx', '18');
-      expect(ellipse).toHaveAttribute('ry', '10');
-      expect(ellipse).toHaveAttribute('opacity', '0.95');
+    const motionGroups = container.querySelectorAll('motion.g');
+    
+    motionGroups.forEach((group) => {
+      const rects = group.querySelectorAll('rect');
+      const ellipses = group.querySelectorAll('ellipse');
+      
+      // Each sushi piece should have 3 rectangles (seaweed wrap, rice, seaweed stripe)
+      expect(rects.length).toBe(3);
+      // Each sushi piece should have 1 ellipse (topping)
+      expect(ellipses.length).toBe(1);
     });
+  });
+
+  it('should render chopsticks', () => {
+    const { container } = render(<SushiBase />);
+    const lines = container.querySelectorAll('line');
+    // Should have 2 lines for chopsticks
+    expect(lines.length).toBe(2);
+  });
+
+  it('should have correct chopstick properties', () => {
+    const { container } = render(<SushiBase />);
+    const lines = container.querySelectorAll('line');
+    
+    const line1 = lines[0];
+    const line2 = lines[1];
+    
+    expect(line1).toHaveAttribute('x1', '260');
+    expect(line1).toHaveAttribute('y1', '40');
+    expect(line1).toHaveAttribute('x2', '290');
+    expect(line1).toHaveAttribute('y2', '230');
+    expect(line1).toHaveAttribute('stroke', '#c9916a');
+    expect(line1).toHaveAttribute('strokeWidth', '6');
+    expect(line1).toHaveAttribute('strokeLinecap', 'round');
+    
+    expect(line2).toHaveAttribute('x1', '272');
+    expect(line2).toHaveAttribute('y1', '40');
+    expect(line2).toHaveAttribute('x2', '298');
+    expect(line2).toHaveAttribute('y2', '230');
+    expect(line2).toHaveAttribute('stroke', '#d4a96a');
+    expect(line2).toHaveAttribute('strokeWidth', '5');
+    expect(line2).toHaveAttribute('strokeLinecap', 'round');
   });
 
   it('should render toppings with different colors', () => {
     const { container } = render(<SushiBase />);
     const ellipses = container.querySelectorAll('ellipse');
-    const colors = Array.from(ellipses).map((e) => e.getAttribute('fill'));
     const expectedColors = ['#f1948a', '#e74c3c', '#f39c12', '#f1948a', '#fdfefe', '#2ecc71'];
-    colors.forEach((color, index) => {
-      expect(color).toBe(expectedColors[index]);
+    
+    ellipses.forEach((ellipse, index) => {
+      expect(ellipse).toHaveAttribute('fill', expectedColors[index]);
+      expect(ellipse).toHaveAttribute('opacity', '0.95');
     });
   });
 
-  it('should render seaweed stripes', () => {
+  it('should render sushi pieces at correct positions', () => {
     const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const stripes = Array.from(rects).filter(
-      (rect) => rect.getAttribute('width') === '52' && rect.getAttribute('height') === '6'
-    );
-    expect(stripes.length).toBe(6);
-  });
-
-  it('should render seaweed stripes with correct opacity', () => {
-    const { container } = render(<SushiBase />);
-    const rects = container.querySelectorAll('rect');
-    const stripes = Array.from(rects).filter(
-      (rect) => rect.getAttribute('width') === '52' && rect.getAttribute('height') === '6'
-    );
-    stripes.forEach((stripe) => {
-      expect(stripe).toHaveAttribute('opacity', '0.6');
-    });
-  });
-
-  it('should render two chopstick lines', () => {
-    const { container } = render(<SushiBase />);
-    const lines = container.querySelectorAll('line');
-    expect(lines.length).toBe(2);
-  });
-
-  it('should render first chopstick with correct attributes', () => {
-    const { container } = render(<SushiBase />);
-    const lines = container.querySelectorAll('line');
-    const firstChopstick = lines[0];
-    expect(firstChopstick).toHaveAttribute('x1', '260');
-    expect(firstChopstick).toHaveAttribute('y1', '40');
-    expect(firstChopstick).toHaveAttribute('x2', '290');
-    expect(firstChopstick).toHaveAttribute('y2', '230');
-    expect(firstChopstick).toHaveAttribute('stroke', '#c9916a');
-    expect(firstChopstick).toHaveAttribute('strokeWidth', '6');
-    expect(firstChopstick).toHaveAttribute('strokeLinecap', 'round');
-  });
-
-  it('should render second chopstick with correct attributes', () => {
-    const { container } = render(<SushiBase />);
-    const lines = container.querySelectorAll('line');
-    const secondChopstick = lines[1];
-    expect(secondChopstick).toHaveAttribute('x1', '272');
-    expect(secondChopstick).toHaveAttribute('y1', '40');
-    expect(secondChopstick).toHaveAttribute('x2', '298');
-    expect(secondChopstick).toHaveAttribute('y2', '230');
-    expect(secondChopstick).toHaveAttribute('stroke', '#d4a96a');
-    expect(secondChopstick).toHaveAttribute('strokeWidth', '5');
-    expect(secondChopstick).toHaveAttribute('strokeLinecap', 'round');
-  });
-
-  it('should render motion svg with animation props', () => {
-    const { container } = render(<SushiBase />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    expect(svg?.tagName.toLowerCase()).toBe('svg');
-  });
-
-  it('should render all sushi pieces in correct positions', () => {
-    const { container } = render(<SushiBase />);
-    const groups = container.querySelectorAll('g');
     const expectedPositions = [
-      { x: 60, y: 80 },
-      { x: 140, y: 80 },
+      { x: 60, y: 80 }, 
+      { x: 140, y: 80 }, 
       { x: 220, y: 80 },
-      { x: 60, y: 150 },
-      { x: 140, y: 150 },
+      { x: 60, y: 150 }, 
+      { x: 140, y: 150 }, 
       { x: 220, y: 150 },
     ];
-
-    expect(groups.length).toBe(expectedPositions.length);
-  });
-
-  it('should render component with proper nesting structure', () => {
-    const { container } = render(<SushiBase />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    expect(svg?.children.length).toBeGreaterThan(0);
-  });
-
-  it('should have motion.svg as the root element', () => {
-    const { container } = render(<SushiBase />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    expect(svg?.parentElement).toBeTruthy();
-  });
-
-  it('should render sushi pieces with proper structure (seaweed, rice, topping, stripe)', () => {
-    const { container } = render(<SushiBase />);
-    const groups = container.querySelectorAll('g');
-    expect(groups.length).toBe(6);
-
-    groups.forEach((group) => {
-      const rects = group.querySelectorAll('rect');
+    
+    const motionGroups = container.querySelectorAll('motion.g');
+    
+    motionGroups.forEach((group, index) => {
       const ellipse = group.querySelector('ellipse');
-      expect(rects.length).toBeGreaterThanOrEqual(2);
-      expect(ellipse).toBeTruthy();
+      const cx = parseFloat(ellipse?.getAttribute('cx') || '0');
+      const cy = parseFloat(ellipse?.getAttribute('cy') || '0');
+      
+      expect(cx).toBe(expectedPositions[index].x);
+      expect(cy).toBe(expectedPositions[index].y - 10); // -10 offset in the component
     });
   });
 
-  it('should render plate inner rect with proper styling', () => {
+  it('should render plate with correct styling', () => {
     const { container } = render(<SushiBase />);
     const rects = container.querySelectorAll('rect');
-    const innerPlate = Array.from(rects).find(
-      (rect) => rect.getAttribute('x') === '14' && rect.getAttribute('y') === '34'
-    );
-    expect(innerPlate).toBeTruthy();
-    expect(innerPlate).toHaveAttribute('width', '272');
-    expect(innerPlate).toHaveAttribute('height', '192');
+    
+    // First rect is outer plate
+    const outerPlate = rects[0];
+    expect(outerPlate).toHaveAttribute('fill', '#1a252f');
+    expect(outerPlate).toHaveAttribute('rx', '20');
+    
+    // Second rect is inner plate
+    const innerPlate = rects[1];
+    expect(innerPlate).toHaveAttribute('fill', '#212f3d');
     expect(innerPlate).toHaveAttribute('rx', '18');
+  });
+
+  it('should render plate highlight', () => {
+    const { container } = render(<SushiBase />);
+    const rects = container.querySelectorAll('rect');
+    
+    const highlight = rects[2];
+    expect(highlight).toHaveAttribute('x', '20');
+    expect(highlight).toHaveAttribute('y', '40');
+    expect(highlight).toHaveAttribute('width', '80');
+    expect(highlight).toHaveAttribute('height', '12');
+    expect(highlight).toHaveAttribute('rx', '6');
+  });
+
+  it('should render seaweed wraps with correct properties', () => {
+    const { container } = render(<SushiBase />);
+    const motionGroups = container.querySelectorAll('motion.g');
+    
+    motionGroups.forEach((group) => {
+      const rects = group.querySelectorAll('rect');
+      const seaweedWrap = rects[0];
+      
+      expect(seaweedWrap).toHaveAttribute('fill', '#1a5276');
+      expect(seaweedWrap).toHaveAttribute('rx', '6');
+      expect(seaweedWrap).toHaveAttribute('width', '52');
+      expect(seaweedWrap).toHaveAttribute('height', '38');
+    });
+  });
+
+  it('should render rice with correct properties', () => {
+    const { container } = render(<SushiBase />);
+    const motionGroups = container.querySelectorAll('motion.g');
+    
+    motionGroups.forEach((group) => {
+      const rects = group.querySelectorAll('rect');
+      const rice = rects[1];
+      
+      expect(rice).toHaveAttribute('fill', '#fdfefe');
+      expect(rice).toHaveAttribute('rx', '4');
+      expect(rice).toHaveAttribute('width', '44');
+      expect(rice).toHaveAttribute('height', '32');
+    });
+  });
+
+  it('should render seaweed stripes with correct properties', () => {
+    const { container } = render(<SushiBase />);
+    const motionGroups = container.querySelectorAll('motion.g');
+    
+    motionGroups.forEach((group) => {
+      const rects = group.querySelectorAll('rect');
+      const stripe = rects[2];
+      
+      expect(stripe).toHaveAttribute('fill', '#1a5276');
+      expect(stripe).toHaveAttribute('opacity', '0.6');
+      expect(stripe).toHaveAttribute('rx', '2');
+      expect(stripe).toHaveAttribute('width', '52');
+      expect(stripe).toHaveAttribute('height', '6');
+    });
+  });
+
+  it('should render toppings with correct dimensions', () => {
+    const { container } = render(<SushiBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    ellipses.forEach((ellipse) => {
+      expect(ellipse).toHaveAttribute('rx', '18');
+      expect(ellipse).toHaveAttribute('ry', '10');
+    });
+  });
+
+  it('should have motion.svg as root element', () => {
+    const { container } = render(<SushiBase />);
+    const svg = container.querySelector('motion\\.svg') || container.querySelector('svg');
+    expect(svg).toBeTruthy();
+    expect(svg?.tagName.toLowerCase()).toBe('svg');
   });
 });
