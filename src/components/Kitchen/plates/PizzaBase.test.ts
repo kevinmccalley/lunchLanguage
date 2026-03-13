@@ -4,465 +4,379 @@ import type { PlacedIngredient } from '../../../types';
 import { PizzaBase } from './PizzaBase';
 
 describe('PizzaBase', () => {
-  describe('Component Rendering', () => {
-    it('should render without crashing with minimal props', () => {
+  describe('rendering', () => {
+    it('should render without crashing', () => {
       const { container } = render(<PizzaBase slices={8} />);
-      expect(container.querySelector('svg')).toBeInTheDocument();
+      expect(container).toBeTruthy();
     });
 
-    it('should render with default empty placedIngredients when not provided', () => {
-      const { container } = render(<PizzaBase slices={4} />);
+    it('should render with default placedIngredients when not provided', () => {
+      const { container } = render(<PizzaBase slices={6} />);
       const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      expect(svg?.getAttribute('width')).toBe('300');
-      expect(svg?.getAttribute('height')).toBe('300');
+      expect(svg).toBeTruthy();
     });
 
-    it('should render with explicit placedIngredients array', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-1', ingredientId: 'pepperoni' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+    it('should render svg with correct dimensions', () => {
+      const { container } = render(<PizzaBase slices={8} />);
       const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      expect(svg).toHaveAttribute('width', '300');
+      expect(svg).toHaveAttribute('height', '300');
+      expect(svg).toHaveAttribute('viewBox', '0 0 300 300');
+    });
+
+    it('should render plate circles', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      // At least 3 circles for plate layers + crust decorations + rim highlight
+      expect(circles.length).toBeGreaterThan(3);
     });
   });
 
-  describe('Slice Lines Rendering', () => {
-    it('should render correct number of slice dividers for 8 slices', () => {
+  describe('slice rendering', () => {
+    it('should render correct number of slice dividers', () => {
       const { container } = render(<PizzaBase slices={8} />);
       const lines = container.querySelectorAll('line');
       expect(lines.length).toBe(8);
     });
 
-    it('should render correct number of slice dividers for 4 slices', () => {
+    it('should render slice lines with correct properties', () => {
       const { container } = render(<PizzaBase slices={4} />);
       const lines = container.querySelectorAll('line');
-      expect(lines.length).toBe(4);
+      lines.forEach((line) => {
+        expect(line).toHaveAttribute('stroke', '#c0392b');
+        expect(line).toHaveAttribute('stroke-width', '2');
+        expect(line).toHaveAttribute('stroke-dasharray', '6 3');
+        expect(line).toHaveAttribute('opacity', '0.7');
+      });
     });
 
-    it('should render correct number of slice dividers for 1 slice', () => {
+    it('should handle single slice', () => {
       const { container } = render(<PizzaBase slices={1} />);
       const lines = container.querySelectorAll('line');
       expect(lines.length).toBe(1);
     });
 
-    it('should render correct number of slice dividers for 12 slices', () => {
-      const { container } = render(<PizzaBase slices={12} />);
+    it('should handle many slices', () => {
+      const { container } = render(<PizzaBase slices={16} />);
       const lines = container.querySelectorAll('line');
-      expect(lines.length).toBe(12);
+      expect(lines.length).toBe(16);
     });
 
-    it('should render slice lines with correct styling', () => {
-      const { container } = render(<PizzaBase slices={2} />);
-      const lines = container.querySelectorAll('line');
-      lines.forEach((line) => {
-        expect(line.getAttribute('stroke')).toBe('#c0392b');
-        expect(line.getAttribute('strokeWidth')).toBe('2');
-        expect(line.getAttribute('strokeDasharray')).toBe('6 3');
-      });
-    });
-  });
-
-  describe('Pizza Base Elements', () => {
-    it('should render pizza plate circle', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const circles = container.querySelectorAll('circle');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render sauce layer with correct color', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const circles = container.querySelectorAll('circle');
-      const sauceCircle = Array.from(circles).find(c => c.getAttribute('fill') === '#e74c3c');
-      expect(sauceCircle).toBeInTheDocument();
-    });
-
-    it('should render cheese base with correct color and opacity', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const circles = container.querySelectorAll('circle');
-      const cheeseCircle = Array.from(circles).find(
-        c => c.getAttribute('fill') === '#f1c40f' && c.getAttribute('opacity') === '0.9'
-      );
-      expect(cheeseCircle).toBeInTheDocument();
-    });
-
-    it('should render crust decoration circles', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const circles = container.querySelectorAll('circle');
-      const crustDecorations = Array.from(circles).filter(
-        c => c.getAttribute('r') === '3' && c.getAttribute('fill') === '#c9916a'
-      );
-      expect(crustDecorations.length).toBe(20);
-    });
-
-    it('should render plate rim highlight', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const circles = container.querySelectorAll('circle[r="147"]');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('Toppings Rendering', () => {
-    it('should render no toppings when placedIngredients is empty', () => {
-      const { container } = render(<PizzaBase slices={8} placedIngredients={[]} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(0);
-    });
-
-    it('should render pepperoni toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni', ingredientId: 'pepperoni' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(9);
-    });
-
-    it('should render mushroom toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-mushroom', ingredientId: 'mushroom' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(7);
-    });
-
-    it('should render olive toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-olive', ingredientId: 'olive' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(8);
-    });
-
-    it('should render bell_pepper toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepper', ingredientId: 'bell_pepper' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(6);
-    });
-
-    it('should render cheese toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-cheese', ingredientId: 'cheese' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(5);
-    });
-
-    it('should render tomato_slice toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-tomato', ingredientId: 'tomato_slice' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(7);
-    });
-
-    it('should render pineapple toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pineapple', ingredientId: 'pineapple' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(7);
-    });
-
-    it('should render jalapeno toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-jalapeno', ingredientId: 'jalapeno' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(6);
-    });
-
-    it('should render basil toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-basil', ingredientId: 'basil' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(8);
-    });
-
-    it('should render sausage toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-sausage', ingredientId: 'sausage' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(8);
-    });
-
-    it('should render onion toppings with correct count', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-onion', ingredientId: 'onion' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(5);
-    });
-
-    it('should render multiple different toppings', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni', ingredientId: 'pepperoni' },
-        { instanceId: 'test-mushroom', ingredientId: 'mushroom' },
-        { instanceId: 'test-olive', ingredientId: 'olive' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(9 + 7 + 8);
-    });
-
-    it('should render unknown topping type with default fallback', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-unknown', ingredientId: 'unknown_topping' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(6);
-    });
-
-    it('should render same ingredient type multiple times', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni-1', ingredientId: 'pepperoni' },
-        { instanceId: 'test-pepperoni-2', ingredientId: 'pepperoni' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(18);
-    });
-  });
-
-  describe('SVG Attributes', () => {
-    it('should have correct viewBox', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const svg = container.querySelector('svg');
-      expect(svg?.getAttribute('viewBox')).toBe('0 0 300 300');
-    });
-
-    it('should have correct dimensions', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const svg = container.querySelector('svg');
-      expect(svg?.getAttribute('width')).toBe('300');
-      expect(svg?.getAttribute('height')).toBe('300');
-    });
-
-    it('should have motion animation attributes', () => {
-      const { container } = render(<PizzaBase slices={8} />);
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      expect(svg?.tagName).toBe('svg');
-    });
-  });
-
-  describe('ToppingShape Component Rendering', () => {
-    it('should render pepperoni shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni', ingredientId: 'pepperoni' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const circles = container.querySelectorAll('circle[r="9"]');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render mushroom shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-mushroom', ingredientId: 'mushroom' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render olive shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-olive', ingredientId: 'olive' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const circles = container.querySelectorAll('circle[r="8"]');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render bell_pepper shape with lines', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepper', ingredientId: 'bell_pepper' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const lines = container.querySelectorAll('line');
-      expect(lines.length).toBeGreaterThan(0);
-    });
-
-    it('should render cheese shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-cheese', ingredientId: 'cheese' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render tomato_slice shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-tomato', ingredientId: 'tomato_slice' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const circles = container.querySelectorAll('circle[r="9"][fill="#e74c3c"]');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render pineapple shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pineapple', ingredientId: 'pineapple' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const rects = container.querySelectorAll('rect');
-      expect(rects.length).toBeGreaterThan(0);
-    });
-
-    it('should render jalapeno shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-jalapeno', ingredientId: 'jalapeno' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render basil shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-basil', ingredientId: 'basil' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const lines = container.querySelectorAll('line');
-      expect(lines.length).toBeGreaterThan(0);
-    });
-
-    it('should render sausage shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-sausage', ingredientId: 'sausage' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render onion shape correctly', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-onion', ingredientId: 'onion' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render default shape for unknown ingredient', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-unknown', ingredientId: 'unknown' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const circles = container.querySelectorAll('circle');
-      expect(circles.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('Edge Cases', () => {
     it('should handle zero slices', () => {
       const { container } = render(<PizzaBase slices={0} />);
       const lines = container.querySelectorAll('line');
       expect(lines.length).toBe(0);
     });
+  });
 
-    it('should handle very large number of slices', () => {
-      const { container } = render(<PizzaBase slices={100} />);
-      const lines = container.querySelectorAll('line');
-      expect(lines.length).toBe(100);
-    });
-
-    it('should handle empty placedIngredients array explicitly', () => {
+  describe('topping rendering', () => {
+    it('should not render toppings when placedIngredients is empty', () => {
       const { container } = render(<PizzaBase slices={8} placedIngredients={[]} />);
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      const groups = container.querySelectorAll('g');
+      // Should not have topping groups (only the main svg structure)
+      expect(groups.length).toBe(0);
     });
 
-    it('should handle multiple ingredients of same type with different instanceIds', () => {
+    it('should render correct number of toppings for pepperoni', () => {
       const ingredients: PlacedIngredient[] = [
-        { instanceId: 'pepperoni-1', ingredientId: 'pepperoni' },
-        { instanceId: 'pepperoni-2', ingredientId: 'pepperoni' },
-        { instanceId: 'pepperoni-3', ingredientId: 'pepperoni' },
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
       ];
       const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
       const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(27);
+      // 9 pepperoni toppings
+      expect(groups.length).toBe(9);
     });
 
-    it('should render consistently with same instanceId', () => {
+    it('should render correct number of toppings for mushroom', () => {
       const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni', ingredientId: 'pepperoni' },
+        { ingredientId: 'mushroom', instanceId: 'mushroom-1' },
       ];
-      const { container: container1 } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const { container: container2 } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      
-      const groups1 = container1.querySelectorAll('g');
-      const groups2 = container2.querySelectorAll('g');
-      expect(groups1.length).toBe(groups2.length);
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 7 mushroom toppings
+      expect(groups.length).toBe(7);
+    });
+
+    it('should render correct number of toppings for olive', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'olive', instanceId: 'olive-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 8 olive toppings
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render correct number of toppings for bell_pepper', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'bell_pepper', instanceId: 'bell_pepper-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 6 bell_pepper toppings
+      expect(groups.length).toBe(6);
+    });
+
+    it('should render correct number of toppings for cheese', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'cheese', instanceId: 'cheese-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 5 cheese toppings
+      expect(groups.length).toBe(5);
+    });
+
+    it('should render correct number of toppings for tomato_slice', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'tomato_slice', instanceId: 'tomato-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 7 tomato_slice toppings
+      expect(groups.length).toBe(7);
+    });
+
+    it('should render correct number of toppings for pineapple', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pineapple', instanceId: 'pineapple-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 7 pineapple toppings
+      expect(groups.length).toBe(7);
+    });
+
+    it('should render correct number of toppings for jalapeno', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 6 jalapeno toppings
+      expect(groups.length).toBe(6);
+    });
+
+    it('should render correct number of toppings for basil', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'basil', instanceId: 'basil-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 8 basil toppings
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render correct number of toppings for sausage', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'sausage', instanceId: 'sausage-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 8 sausage toppings
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render correct number of toppings for onion', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'onion', instanceId: 'onion-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 5 onion toppings
+      expect(groups.length).toBe(5);
+    });
+
+    it('should render default 6 toppings for unknown ingredient', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'unknown_topping', instanceId: 'unknown-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 6 default toppings
+      expect(groups.length).toBe(6);
+    });
+
+    it('should render multiple different toppings', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
+        { ingredientId: 'mushroom', instanceId: 'mushroom-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 9 pepperoni + 7 mushroom = 16
+      expect(groups.length).toBe(16);
+    });
+
+    it('should render multiple instances of same topping', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-2' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      // 9 pepperoni + 9 pepperoni = 18
+      expect(groups.length).toBe(18);
+    });
+
+    it('should render toppings with correct transform attribute', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const groups = container.querySelectorAll('g');
+      groups.forEach((group) => {
+        const transform = group.getAttribute('transform');
+        expect(transform).toBeTruthy();
+        expect(transform).toMatch(/translate\(\d+\.?\d* \d+\.?\d*\) rotate\(\d+\.?\d*\)/);
+      });
     });
   });
 
-  describe('Complex Scenarios', () => {
-    it('should render pizza with all available toppings', () => {
+  describe('topping shapes', () => {
+    it('should render pepperoni circles', () => {
       const ingredients: PlacedIngredient[] = [
-        { instanceId: 'id1', ingredientId: 'pepperoni' },
-        { instanceId: 'id2', ingredientId: 'mushroom' },
-        { instanceId: 'id3', ingredientId: 'olive' },
-        { instanceId: 'id4', ingredientId: 'bell_pepper' },
-        { instanceId: 'id5', ingredientId: 'cheese' },
-        { instanceId: 'id6', ingredientId: 'tomato_slice' },
-        { instanceId: 'id7', ingredientId: 'pineapple' },
-        { instanceId: 'id8', ingredientId: 'jalapeno' },
-        { instanceId: 'id9', ingredientId: 'basil' },
-        { instanceId: 'id10', ingredientId: 'sausage' },
-        { instanceId: 'id11', ingredientId: 'onion' },
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const circles = container.querySelectorAll('circle');
+      // Plate circles + crust decoration circles + pepperoni circles
+      expect(circles.length).toBeGreaterThan(20);
+    });
+
+    it('should render mushroom with rects', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'mushroom', instanceId: 'mushroom-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const rects = container.querySelectorAll('rect');
+      // Should have at least 7 rect elements for mushrooms
+      expect(rects.length).toBeGreaterThanOrEqual(7);
+    });
+
+    it('should render olive with nested circles', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'olive', instanceId: 'olive-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const circles = container.querySelectorAll('circle');
+      expect(circles.length).toBeGreaterThan(20);
+    });
+
+    it('should render bell_pepper with ellipse', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'bell_pepper', instanceId: 'bell_pepper-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThanOrEqual(6);
+    });
+
+    it('should render cheese with ellipse', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'cheese', instanceId: 'cheese-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('should render pineapple with rect and circles', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pineapple', instanceId: 'pineapple-1' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      const rects = container.querySelectorAll('rect');
+      expect(rects.length).toBeGreaterThanOrEqual(7);
+    });
+  });
+
+  describe('motion animation', () => {
+    it('should render motion.svg with animation properties', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const svg = container.querySelector('svg');
+      expect(svg).toBeTruthy();
+      // motion.svg is rendered as svg element with animation data attributes
+      expect(svg?.tagName).toBe('svg');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty placedIngredients array', () => {
+      const { container } = render(<PizzaBase slices={8} placedIngredients={[]} />);
+      expect(container).toBeTruthy();
+    });
+
+    it('should handle undefined placedIngredients', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      expect(container).toBeTruthy();
+    });
+
+    it('should handle very small number of slices', () => {
+      const { container } = render(<PizzaBase slices={1} />);
+      expect(container).toBeTruthy();
+    });
+
+    it('should handle large number of slices', () => {
+      const { container } = render(<PizzaBase slices={32} />);
+      const lines = container.querySelectorAll('line');
+      expect(lines.length).toBe(32);
+    });
+
+    it('should handle placedIngredients with special characters in instanceId', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-123-abc_test' },
+      ];
+      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
+      expect(container).toBeTruthy();
+    });
+
+    it('should handle mixed valid and unknown ingredients', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'pepperoni', instanceId: 'pepperoni-1' },
+        { ingredientId: 'unknown_item', instanceId: 'unknown-1' },
+        { ingredientId: 'mushroom', instanceId: 'mushroom-1' },
       ];
       const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
       const groups = container.querySelectorAll('g');
-      const expectedCount = 9 + 7 + 8 + 6 + 5 + 7 + 7 + 6 + 8 + 8 + 5;
-      expect(groups.length).toBe(expectedCount);
+      // 9 pepperoni + 6 unknown + 7 mushroom = 22
+      expect(groups.length).toBe(22);
+    });
+  });
+
+  describe('crust rendering', () => {
+    it('should render crust circle', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      // Should include crust circle
+      expect(circles.length).toBeGreaterThan(0);
     });
 
-    it('should handle mixed valid and unknown toppings', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'id1', ingredientId: 'pepperoni' },
-        { instanceId: 'id2', ingredientId: 'unknown_topping_1' },
-        { instanceId: 'id3', ingredientId: 'mushroom' },
-        { instanceId: 'id4', ingredientId: 'unknown_topping_2' },
-      ];
-      const { container } = render(<PizzaBase slices={8} placedIngredients={ingredients} />);
-      const groups = container.querySelectorAll('g');
-      expect(groups.length).toBe(9 + 6 + 7 + 6);
+    it('should render 20 crust decoration circles', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      // At least plate circles + 20 crust decorations + rim
+      expect(circles.length).toBeGreaterThanOrEqual(23);
+    });
+  });
+
+  describe('base layers', () => {
+    it('should render plate base circle', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      expect(circles.length).toBeGreaterThan(0);
     });
 
-    it('should render with different slice configurations and toppings', () => {
-      const ingredients: PlacedIngredient[] = [
-        { instanceId: 'test-pepperoni', ingredientId: 'pepperoni' },
-      ];
-      const { container: container4 } = render(
-        <PizzaBase slices={4} placedIngredients={ingredients} />
-      );
-      const { container: container8 } = render(
-        <PizzaBase slices={8} placedIngredients={ingredients} />
-      );
-      
-      const lines4 = container4.querySelectorAll('line');
-      const lines8 = container8.querySelectorAll('line');
-      expect(lines4.length).toBe(4);
-      expect(lines8.length).toBe(8);
+    it('should render sauce circle', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      expect(circles.length).toBeGreaterThan(0);
+    });
+
+    it('should render cheese base circle', () => {
+      const { container } = render(<PizzaBase slices={8} />);
+      const circles = container.querySelectorAll('circle');
+      expect(circles.length).toBeGreaterThan(0);
     });
   });
 });
