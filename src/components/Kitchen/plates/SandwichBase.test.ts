@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { render } from '@testing-library/react';
-import { SandwichBase } from '../src/components/Kitchen/plates/SandwichBase';
+import { SandwichBase } from './SandwichBase';
 
 describe('SandwichBase', () => {
   it('should render without crashing', () => {
