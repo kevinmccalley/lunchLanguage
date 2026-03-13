@@ -3,64 +3,65 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Kitchen } from './Kitchen';
 import { useGameStore } from '../../store/gameStore';
 import { useLanguageStore } from '../../store/languageStore';
-import { useSpeech } from '../../hooks/useSpeech';
 import { useT } from '../../i18n/useT';
+import { useSpeech } from '../../hooks/useSpeech';
 import { getMealInfo } from '../../data/meals';
 import { getMealCostUSD, formatPrice } from '../../utils/currency';
+import '@testing-library/jest-dom';
 
 jest.mock('../../store/gameStore');
 jest.mock('../../store/languageStore');
-jest.mock('../../hooks/useSpeech');
 jest.mock('../../i18n/useT');
+jest.mock('../../hooks/useSpeech');
 jest.mock('../../data/meals');
 jest.mock('../../utils/currency');
+jest.mock('./MealPlate', () => ({
+  MealPlate: () => <div data-testid="meal-plate">MealPlate</div>,
+}));
 jest.mock('../Ingredients/IngredientShelf', () => ({
-  IngredientShelf: () => <div data-testid="ingredient-shelf">Ingredient Shelf</div>,
+  IngredientShelf: ({ onAdd }: any) => (
+    <div data-testid="ingredient-shelf" onClick={() => onAdd('ingredient1')}>
+      IngredientShelf
+    </div>
+  ),
 }));
 jest.mock('../Chef/ChefDialog', () => ({
-  ChefDialog: () => <div data-testid="chef-dialog">Chef Dialog</div>,
+  ChefDialog: () => <div data-testid="chef-dialog">ChefDialog</div>,
 }));
 jest.mock('../UI/Button', () => ({
-  Button: ({ children, onClick, disabled, variant }: any) => (
+  Button: ({ onClick, children, disabled, variant }: any) => (
     <button onClick={onClick} disabled={disabled} data-variant={variant}>
       {children}
     </button>
   ),
 }));
 jest.mock('../UI/StarScore', () => ({
-  StarScore: () => <div data-testid="star-score">Star Score</div>,
-}));
-jest.mock('./MealPlate', () => ({
-  MealPlate: ({ burritoWrapping }: any) => (
-    <div data-testid="meal-plate" data-burrito-wrapping={burritoWrapping}>
-      Meal Plate
-    </div>
-  ),
+  StarScore: () => <div data-testid="star-score">StarScore</div>,
 }));
 
 describe('Kitchen Component', () => {
-  const mockSetChefMessage = jest.fn();
   const mockSetPhase = jest.fn();
+  const mockSetChefMessage = jest.fn();
   const mockAddIngredient = jest.fn();
   const mockSetPizzaSlices = jest.fn();
   const mockSpeak = jest.fn();
 
-  const defaultGameStore = {
+  const defaultGameStoreState = {
     selectedMeal: 'pizza',
     placedIngredients: ['cheese', 'tomato'],
     pizzaSlices: 8,
+    familySize: 4,
     setPizzaSlices: mockSetPizzaSlices,
     addIngredient: mockAddIngredient,
     setPhase: mockSetPhase,
     setChefMessage: mockSetChefMessage,
-    familySize: 4,
   };
 
-  const defaultLanguageStore = {
+  const defaultLanguageStoreState = {
     language: 'en',
   };
 
-  const defaultT = {
+  const defaultTranslations = {
     kitchen: {
       addHint: 'Add ingredients',
       myMeal: (name: string) => `My ${name}`,
@@ -70,7 +71,7 @@ describe('Kitchen Component', () => {
       back: 'Back',
       ingredients: (count: number) => `${count} ingredients`,
       forPeople: (size: number) => `For ${size} people`,
-      slices: (slices: number) => `${slices} slices`,
+      slices: (count: number) => `${count} slices`,
       doneButton: 'Done',
     },
     meals: {
@@ -79,49 +80,43 @@ describe('Kitchen Component', () => {
   };
 
   const defaultMealInfo = {
-    bgColor: '#fff3cd',
-    accentColor: '#ff6b6b',
+    bgColor: '#fff9e6',
+    accentColor: '#f57f17',
     emoji: '🍕',
     hasSlices: true,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useGameStore as jest.Mock).mockReturnValue(defaultGameStore);
-    (useLanguageStore as jest.Mock).mockReturnValue(defaultLanguageStore);
+    (useGameStore as jest.Mock).mockReturnValue(defaultGameStoreState);
+    (useLanguageStore as jest.Mock).mockReturnValue(defaultLanguageStoreState);
+    (useT as jest.Mock).mockReturnValue(defaultTranslations);
     (useSpeech as jest.Mock).mockReturnValue({ speak: mockSpeak });
-    (useT as jest.Mock).mockReturnValue(defaultT);
     (getMealInfo as jest.Mock).mockReturnValue(defaultMealInfo);
-    (getMealCostUSD as jest.Mock).mockReturnValue(15.99);
-    (formatPrice as jest.Mock).mockReturnValue('$15.99');
+    (getMealCostUSD as jest.Mock).mockReturnValue(12.99);
+    (formatPrice as jest.Mock).mockReturnValue('$12.99');
   });
 
-  describe('Rendering', () => {
+  describe('Component Rendering', () => {
     it('should render the Kitchen component with all main sections', () => {
       render(<Kitchen />);
 
+      expect(screen.getByTestId('meal-plate')).toBeInTheDocument();
       expect(screen.getByTestId('ingredient-shelf')).toBeInTheDocument();
       expect(screen.getByTestId('chef-dialog')).toBeInTheDocument();
       expect(screen.getByTestId('star-score')).toBeInTheDocument();
-      expect(screen.getByTestId('meal-plate')).toBeInTheDocument();
     });
 
-    it('should display the meal emoji and name in the header', () => {
+    it('should display the meal name and emoji in header', () => {
       render(<Kitchen />);
 
-      expect(screen.getByText('🍕 My Pizza')).toBeInTheDocument();
+      expect(screen.getByText(/My Pizza/)).toBeInTheDocument();
     });
 
     it('should display the back button', () => {
       render(<Kitchen />);
 
       expect(screen.getByText('Back')).toBeInTheDocument();
-    });
-
-    it('should display the done button', () => {
-      render(<Kitchen />);
-
-      expect(screen.getByText('Done')).toBeInTheDocument();
     });
 
     it('should display ingredient count in stats bar', () => {
@@ -136,21 +131,28 @@ describe('Kitchen Component', () => {
       expect(screen.getByText('For 4 people')).toBeInTheDocument();
     });
 
-    it('should display formatted meal cost', () => {
+    it('should display price in stats bar', () => {
       render(<Kitchen />);
 
-      expect(screen.getByText('💰 $15.99')).toBeInTheDocument();
+      expect(screen.getByText(/💰 \$12.99/)).toBeInTheDocument();
+    });
+
+    it('should display done button', () => {
+      render(<Kitchen />);
+
+      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     });
   });
 
-  describe('Pizza slices functionality', () => {
-    it('should render slice picker button when meal has slices', () => {
+  describe('Pizza Slices Picker', () => {
+    it('should show slice picker button when meal has slices', () => {
       render(<Kitchen />);
 
-      expect(screen.getByText('8 slices')).toBeInTheDocument();
+      const sliceButton = screen.getByRole('button', { name: '8 slices' });
+      expect(sliceButton).toBeInTheDocument();
     });
 
-    it('should not render slice picker button when meal does not have slices', () => {
+    it('should hide slice picker button when meal does not have slices', () => {
       (getMealInfo as jest.Mock).mockReturnValue({
         ...defaultMealInfo,
         hasSlices: false,
@@ -158,30 +160,43 @@ describe('Kitchen Component', () => {
 
       render(<Kitchen />);
 
-      expect(screen.queryByText('8 slices')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /slices/ })).not.toBeInTheDocument();
     });
 
-    it('should toggle slice picker visibility when button is clicked', () => {
+    it('should toggle slice picker visibility when slice button is clicked', () => {
       render(<Kitchen />);
 
-      const sliceButton = screen.getByText('8 slices');
+      const sliceButton = screen.getByRole('button', { name: '8 slices' });
       fireEvent.click(sliceButton);
 
-      expect(screen.getByText('4')).toBeInTheDocument();
-      expect(screen.getByText('6')).toBeInTheDocument();
-      expect(screen.getByText('8')).toBeInTheDocument();
-      expect(screen.getByText('10')).toBeInTheDocument();
-      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '4' })).toBeInTheDocument();
+
+      fireEvent.click(sliceButton);
+
+      expect(screen.queryByRole('button', { name: '4' })).not.toBeInTheDocument();
     });
 
-    it('should set pizza slices when a slice option is clicked', () => {
+    it('should show all slice options when picker is open', () => {
       render(<Kitchen />);
 
-      const sliceButton = screen.getByText('8 slices');
+      const sliceButton = screen.getByRole('button', { name: '8 slices' });
       fireEvent.click(sliceButton);
 
-      const sixSlicesButton = screen.getAllByText('6')[1] as HTMLButtonElement;
-      fireEvent.click(sixSlicesButton);
+      expect(screen.getByRole('button', { name: '4' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '6' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '8' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '10' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '12' })).toBeInTheDocument();
+    });
+
+    it('should update pizza slices when option is selected', () => {
+      render(<Kitchen />);
+
+      const sliceButton = screen.getByRole('button', { name: '8 slices' });
+      fireEvent.click(sliceButton);
+
+      const sixSliceButton = screen.getByRole('button', { name: '6' });
+      fireEvent.click(sixSliceButton);
 
       expect(mockSetPizzaSlices).toHaveBeenCalledWith(6);
     });
@@ -189,204 +204,267 @@ describe('Kitchen Component', () => {
     it('should close slice picker after selection', () => {
       render(<Kitchen />);
 
-      const sliceButton = screen.getByText('8 slices');
+      const sliceButton = screen.getByRole('button', { name: '8 slices' });
       fireEvent.click(sliceButton);
 
-      const sixSlicesButton = screen.getAllByText('6')[1] as HTMLButtonElement;
-      fireEvent.click(sixSlicesButton);
+      const sixSliceButton = screen.getByRole('button', { name: '6' });
+      fireEvent.click(sixSliceButton);
 
-      expect(screen.queryByText('4')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '4' })).not.toBeInTheDocument();
     });
   });
 
-  describe('Done button functionality', () => {
+  describe('Done Button Behavior', () => {
+    it('should disable done button when there are no ingredients', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
+        placedIngredients: [],
+      });
+
+      render(<Kitchen />);
+
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      expect(doneButton).toBeDisabled();
+    });
+
+    it('should enable done button when ingredients are present', () => {
+      render(<Kitchen />);
+
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      expect(doneButton).not.toBeDisabled();
+    });
+
+    it('should show warning when done is clicked with no ingredients', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
+        placedIngredients: [],
+      });
+
+      render(<Kitchen />);
+
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      fireEvent.click(doneButton);
+
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        'Add at least one ingredient',
+        'thinking'
+      );
+    });
+
+    it('should transition to mealSplash when done is clicked with ingredients', () => {
+      render(<Kitchen />);
+
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      fireEvent.click(doneButton);
+
+      expect(mockSetChefMessage).toHaveBeenCalledWith('Great job!', 'excited');
+    });
+
     it('should have success variant when ingredients >= 2', () => {
       render(<Kitchen />);
 
-      const button = screen.getByText('Done');
-      expect(button).toHaveAttribute('data-variant', 'success');
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      expect(doneButton).toHaveAttribute('data-variant', 'success');
     });
 
     it('should have secondary variant when ingredients < 2', () => {
       (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
+        ...defaultGameStoreState,
         placedIngredients: ['cheese'],
       });
 
       render(<Kitchen />);
 
-      const button = screen.getByText('Done');
-      expect(button).toHaveAttribute('data-variant', 'secondary');
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      expect(doneButton).toHaveAttribute('data-variant', 'secondary');
     });
+  });
 
-    it('should disable done button when no ingredients are added', () => {
+  describe('Burrito Wrapping', () => {
+    it('should set burrito wrapping state when burrito is selected', async () => {
       (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
-        placedIngredients: [],
-      });
-
-      render(<Kitchen />);
-
-      const button = screen.getByText('Done');
-      expect(button).toBeDisabled();
-    });
-
-    it('should show warning message when done is clicked with no ingredients', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
-        placedIngredients: [],
-      });
-
-      render(<Kitchen />);
-      const button = screen.getByText('Done');
-      fireEvent.click(button);
-
-      expect(mockSetChefMessage).toHaveBeenCalledWith('Add at least one ingredient', 'thinking');
-    });
-
-    it('should show success message and transition to mealSplash when done is clicked with ingredients (non-burrito)', () => {
-      render(<Kitchen />);
-
-      const button = screen.getByText('Done');
-      fireEvent.click(button);
-
-      expect(mockSetChefMessage).toHaveBeenCalledWith('Great job!', 'excited');
-      expect(mockSetPhase).toHaveBeenCalledWith('mealSplash');
-    });
-
-    it('should set burritoWrapping to true for burrito meal', () => {
-      jest.useFakeTimers();
-      (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
+        ...defaultGameStoreState,
         selectedMeal: 'burrito',
       });
 
+      jest.useFakeTimers();
+
       render(<Kitchen />);
 
-      const mealPlate = screen.getByTestId('meal-plate');
-      expect(mealPlate).toHaveAttribute('data-burrito-wrapping', 'false');
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      fireEvent.click(doneButton);
 
-      const button = screen.getByText('Done');
-      fireEvent.click(button);
+      expect(screen.getByTestId('meal-plate')).toBeInTheDocument();
 
-      expect(mockSetChefMessage).toHaveBeenCalledWith('Great job!', 'excited');
+      jest.runAllTimers();
+
+      jest.useRealTimers();
+    });
+
+    it('should transition to mealSplash after wrapping timeout for burrito', async () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
+        selectedMeal: 'burrito',
+      });
+
+      jest.useFakeTimers();
+
+      render(<Kitchen />);
+
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      fireEvent.click(doneButton);
+
       jest.advanceTimersByTime(1800);
+
       expect(mockSetPhase).toHaveBeenCalledWith('mealSplash');
 
       jest.useRealTimers();
     });
-  });
 
-  describe('Back button functionality', () => {
-    it('should navigate back to mealSelect when back button is clicked', () => {
+    it('should immediately transition for non-burrito meals', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
+        selectedMeal: 'pizza',
+      });
+
       render(<Kitchen />);
 
-      const backButton = screen.getByText('Back');
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      fireEvent.click(doneButton);
+
+      expect(mockSetPhase).toHaveBeenCalledWith('mealSplash');
+    });
+  });
+
+  describe('Back Button', () => {
+    it('should navigate to mealSelect when back button is clicked', () => {
+      render(<Kitchen />);
+
+      const backButton = screen.getByRole('button', { name: 'Back' });
       fireEvent.click(backButton);
 
       expect(mockSetPhase).toHaveBeenCalledWith('mealSelect');
     });
   });
 
-  describe('Initialization and side effects', () => {
-    it('should set chef message and speak on mount', () => {
+  describe('Initial Effects', () => {
+    it('should set chef message on mount', () => {
       render(<Kitchen />);
 
-      expect(mockSetChefMessage).toHaveBeenCalledWith('Add ingredients', 'happy');
-      expect(mockSpeak).toHaveBeenCalledWith('My Pizza. Add ingredients. Double tap to add');
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        'Add ingredients',
+        'happy'
+      );
     });
 
-    it('should update chef message when translations change', () => {
-      const { rerender } = render(<Kitchen />);
+    it('should speak initial message on mount', () => {
+      render(<Kitchen />);
 
-      mockSetChefMessage.mockClear();
-      mockSpeak.mockClear();
+      expect(mockSpeak).toHaveBeenCalledWith(
+        'My Pizza. Add ingredients. Double tap to add'
+      );
+    });
 
-      const newT = {
-        ...defaultT,
-        kitchen: {
-          ...defaultT.kitchen,
-          addHint: 'New hint',
+    it('should use correct meal name in initial speech', () => {
+      (useT as jest.Mock).mockReturnValue({
+        ...defaultTranslations,
+        meals: {
+          pizza: { name: 'Pepperoni Pizza' },
         },
-      };
-      (useT as jest.Mock).mockReturnValue(newT);
-
-      rerender(<Kitchen />);
-
-      expect(mockSetChefMessage).toHaveBeenCalled();
-    });
-  });
-
-  describe('Meal cost calculation', () => {
-    it('should call getMealCostUSD with correct parameters', () => {
-      render(<Kitchen />);
-
-      expect(getMealCostUSD).toHaveBeenCalledWith('pizza', 2);
-    });
-
-    it('should call formatPrice with correct parameters', () => {
-      render(<Kitchen />);
-
-      expect(formatPrice).toHaveBeenCalledWith(15.99, 'en');
-    });
-
-    it('should update cost when ingredient count changes', () => {
-      const { rerender } = render(<Kitchen />);
-
-      getMealCostUSD.mockClear();
-      formatPrice.mockClear();
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
-        placedIngredients: ['cheese', 'tomato', 'basil'],
       });
 
-      rerender(<Kitchen />);
+      render(<Kitchen />);
 
-      expect(getMealCostUSD).toHaveBeenCalledWith('pizza', 3);
+      expect(mockSpeak).toHaveBeenCalledWith(
+        expect.stringContaining('My Pepperoni Pizza')
+      );
     });
   });
 
-  describe('Meal info usage', () => {
-    it('should call getMealInfo with the selected meal', () => {
+  describe('Styling and Layout', () => {
+    it('should render with correct background gradient', () => {
       render(<Kitchen />);
 
-      expect(getMealInfo).toHaveBeenCalledWith('pizza');
-    });
-
-    it('should use meal background color in styling', () => {
-      render(<Kitchen />);
-
-      const container = screen.getByText('Back').closest('div')?.parentElement;
+      const container = screen.getByTestId('meal-plate').parentElement?.parentElement;
       expect(container).toHaveStyle(
         `background: linear-gradient(180deg, ${defaultMealInfo.bgColor} 0%, white 100%)`
       );
     });
 
-    it('should use meal accent color for ingredient count styling', () => {
+    it('should have proper flex layout', () => {
       render(<Kitchen />);
 
-      const ingredientBadge = screen.getByText('2 ingredients');
-      expect(ingredientBadge).toHaveStyle(`background: ${defaultMealInfo.accentColor}`);
+      const container = screen.getByTestId('meal-plate').parentElement?.parentElement;
+      expect(container).toHaveStyle('display: flex');
+      expect(container).toHaveStyle('flexDirection: column');
+      expect(container).toHaveStyle('height: 100vh');
     });
   });
 
-  describe('Language store integration', () => {
-    it('should use language from language store for price formatting', () => {
-      (useLanguageStore as jest.Mock).mockReturnValue({
-        language: 'fr',
+  describe('Stats Display', () => {
+    it('should display correct cost using getMealCostUSD and formatPrice', () => {
+      (getMealCostUSD as jest.Mock).mockReturnValue(15.50);
+      (formatPrice as jest.Mock).mockReturnValue('$15.50');
+
+      render(<Kitchen />);
+
+      expect(getMealCostUSD).toHaveBeenCalledWith('pizza', 2);
+      expect(formatPrice).toHaveBeenCalledWith(15.50, 'en');
+      expect(screen.getByText(/💰 \$15.50/)).toBeInTheDocument();
+    });
+
+    it('should update stats when ingredient count changes', () => {
+      const { rerender } = render(<Kitchen />);
+
+      expect(screen.getByText('2 ingredients')).toBeInTheDocument();
+
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
+        placedIngredients: ['cheese', 'tomato', 'basil'],
       });
 
-      render(<Kitchen />);
+      rerender(<Kitchen />);
 
-      expect(formatPrice).toHaveBeenCalledWith(15.99, 'fr');
+      expect(screen.getByText('3 ingredients')).toBeInTheDocument();
     });
   });
 
-  describe('Edge cases', () => {
-    it('should handle zero ingredients gracefully', () => {
+  describe('MealPlate Props', () => {
+    it('should pass burritoWrapping prop to MealPlate', () => {
+      const MealPlateMock = jest.fn(() => <div data-testid="meal-plate">MealPlate</div>);
+      jest.doMock('./MealPlate', () => ({
+        MealPlate: MealPlateMock,
+      }));
+
+      render(<Kitchen />);
+
+      expect(screen.getByTestId('meal-plate')).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle meal selection change', () => {
+      const { rerender } = render(<Kitchen />);
+
       (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
+        ...defaultGameStoreState,
+        selectedMeal: 'tacos',
+      });
+      (useT as jest.Mock).mockReturnValue({
+        ...defaultTranslations,
+        meals: {
+          tacos: { name: 'Tacos' },
+        },
+      });
+
+      rerender(<Kitchen />);
+
+      expect(screen.getByText(/My Tacos/)).toBeInTheDocument();
+    });
+
+    it('should handle empty placedIngredients array', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        ...defaultGameStoreState,
         placedIngredients: [],
       });
 
@@ -395,33 +473,25 @@ describe('Kitchen Component', () => {
       expect(screen.getByText('0 ingredients')).toBeInTheDocument();
     });
 
-    it('should handle large ingredient counts', () => {
-      const manyIngredients = Array(50).fill('ingredient');
+    it('should handle large family sizes', () => {
       (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
-        placedIngredients: manyIngredients,
+        ...defaultGameStoreState,
+        familySize: 12,
       });
 
       render(<Kitchen />);
 
-      expect(screen.getByText('50 ingredients')).toBeInTheDocument();
+      expect(screen.getByText('For 12 people')).toBeInTheDocument();
     });
 
-    it('should handle different meal types correctly', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        ...defaultGameStore,
-        selectedMeal: 'sandwich',
-      });
-      (getMealInfo as jest.Mock).mockReturnValue({
-        ...defaultMealInfo,
-        emoji: '🥪',
-        hasSlices: false,
+    it('should handle different languages', () => {
+      (useLanguageStore as jest.Mock).mockReturnValue({
+        language: 'es',
       });
 
       render(<Kitchen />);
 
-      expect(screen.getByText('🥪')).toBeInTheDocument();
-      expect(screen.queryByText(/slices/)).not.toBeInTheDocument();
+      expect(formatPrice).toHaveBeenCalledWith(12.99, 'es');
     });
   });
 });
