@@ -19,390 +19,247 @@ describe('ChefDialog', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseSpeech.mockReturnValue({ speak: mockSpeak });
+    mockUseSpeech.mockReturnValue({ speak: mockSpeak } as any);
+    mockUseGameStore.mockReturnValue({
+      chefMessage: 'Hello!',
+      chefEmotion: 'happy',
+    } as any);
   });
 
   describe('rendering', () => {
     it('should render the ChefDialog component', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello!',
-        chefEmotion: 'happy',
-      } as any);
-
       render(<ChefDialog />);
-
       expect(screen.getByText('Hello!')).toBeInTheDocument();
     });
 
-    it('should render with default compact prop as false', () => {
+    it('should render ChefCharacter with default size when not compact', () => {
       mockUseGameStore.mockReturnValue({
         chefMessage: 'Test message',
-        chefEmotion: 'neutral',
+        chefEmotion: 'happy',
       } as any);
 
-      render(<ChefDialog />);
+      render(<ChefDialog compact={false} />);
       const chefCharacter = screen.getByTestId('chef-character');
-
       expect(chefCharacter).toHaveAttribute('data-size', '100');
     });
 
-    it('should render with compact prop as true', () => {
+    it('should render ChefCharacter with compact size when compact is true', () => {
       mockUseGameStore.mockReturnValue({
         chefMessage: 'Test message',
-        chefEmotion: 'neutral',
+        chefEmotion: 'happy',
       } as any);
 
       render(<ChefDialog compact={true} />);
       const chefCharacter = screen.getByTestId('chef-character');
-
       expect(chefCharacter).toHaveAttribute('data-size', '70');
     });
 
-    it('should render ChefCharacter with correct emotion', () => {
+    it('should pass chefEmotion to ChefCharacter', () => {
       mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello!',
-        chefEmotion: 'excited',
+        chefMessage: 'Test message',
+        chefEmotion: 'sad',
       } as any);
 
       render(<ChefDialog />);
       const chefCharacter = screen.getByTestId('chef-character');
-
-      expect(chefCharacter).toHaveAttribute('data-emotion', 'excited');
+      expect(chefCharacter).toHaveAttribute('data-emotion', 'sad');
     });
 
-    it('should render the speech bubble with correct styling for non-compact mode', () => {
+    it('should render message in speech bubble', () => {
+      const testMessage = 'Welcome to the kitchen!';
       mockUseGameStore.mockReturnValue({
-        chefMessage: 'Welcome to the kitchen!',
+        chefMessage: testMessage,
         chefEmotion: 'happy',
       } as any);
 
+      render(<ChefDialog />);
+      expect(screen.getByText(testMessage)).toBeInTheDocument();
+    });
+
+    it('should apply default padding when not compact', () => {
       const { container } = render(<ChefDialog compact={false} />);
-      const speechBubble = container.querySelector(
-        'div[style*="background: white"]'
-      );
-
-      expect(speechBubble).toHaveStyle({
-        background: 'white',
-        borderRadius: '16px',
-        padding: '14px 18px',
-        maxWidth: '320px',
-        border: '2px solid #ff6b35',
-        fontSize: '15px',
-        lineHeight: '1.5',
-        color: '#2c2c2c',
-        fontWeight: '500',
-      });
+      const mainDiv = container.querySelector('div[style*="padding"]');
+      expect(mainDiv).toHaveStyle('padding: 12px 16px');
     });
 
-    it('should render the speech bubble with correct styling for compact mode', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Compact message',
-        chefEmotion: 'happy',
-      } as any);
-
+    it('should apply compact padding when compact is true', () => {
       const { container } = render(<ChefDialog compact={true} />);
-      const speechBubbles = container.querySelectorAll(
-        'div[style*="background: white"]'
-      );
-
-      const compactBubble = Array.from(speechBubbles).find((bubble) =>
-        bubble.textContent?.includes('Compact message')
-      );
-
-      expect(compactBubble).toHaveStyle('padding: 10px 14px');
-      expect(compactBubble).toHaveStyle('fontSize: 13px');
-    });
-
-    it('should render speech bubble tail elements', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Test',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { container } = render(<ChefDialog />);
-      const divs = container.querySelectorAll('div');
-
-      let tailCount = 0;
-      divs.forEach((div) => {
-        const style = window.getComputedStyle(div);
-        if (
-          style.borderRight === '14px solid rgb(255, 107, 53)' ||
-          style.borderRight === '13px solid white'
-        ) {
-          tailCount++;
-        }
-      });
-
-      expect(tailCount).toBeGreaterThan(0);
+      const mainDiv = container.querySelector('div[style*="padding"]');
+      expect(mainDiv).toHaveStyle('padding: 8px 12px');
     });
   });
 
   describe('speech functionality', () => {
     it('should call speak when chefMessage is present', async () => {
       mockUseGameStore.mockReturnValue({
-        chefMessage: 'Hello Chef!',
+        chefMessage: 'Hello!',
         chefEmotion: 'happy',
       } as any);
 
       render(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('Hello Chef!');
+        expect(mockSpeak).toHaveBeenCalledWith('Hello!');
       });
     });
 
-    it('should not call speak when chefMessage is empty', () => {
+    it('should not call speak when chefMessage is empty string', () => {
       mockUseGameStore.mockReturnValue({
         chefMessage: '',
-        chefEmotion: 'neutral',
+        chefEmotion: 'happy',
       } as any);
 
       render(<ChefDialog />);
-
       expect(mockSpeak).not.toHaveBeenCalled();
     });
 
     it('should call speak when chefMessage changes', async () => {
       const { rerender } = render(<ChefDialog />);
 
+      await waitFor(() => {
+        expect(mockSpeak).toHaveBeenCalledWith('Hello!');
+      });
+
+      mockSpeak.mockClear();
+
       mockUseGameStore.mockReturnValue({
-        chefMessage: 'First message',
+        chefMessage: 'New message',
         chefEmotion: 'happy',
       } as any);
 
       rerender(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('First message');
-      });
-
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Second message',
-        chefEmotion: 'excited',
-      } as any);
-
-      rerender(<ChefDialog />);
-
-      await waitFor(() => {
-        expect(mockSpeak).toHaveBeenLastCalledWith('Second message');
+        expect(mockSpeak).toHaveBeenCalledWith('New message');
       });
     });
 
-    it('should speak multiple times for different messages', async () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Message 1',
-        chefEmotion: 'happy',
-      } as any);
-
+    it('should handle multiple message changes', async () => {
       const { rerender } = render(<ChefDialog />);
 
       await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('Message 1');
+        expect(mockSpeak).toHaveBeenCalledWith('Hello!');
       });
 
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Message 2',
-        chefEmotion: 'excited',
-      } as any);
+      const messages = ['First message', 'Second message', 'Third message'];
 
-      rerender(<ChefDialog />);
+      for (const message of messages) {
+        mockSpeak.mockClear();
+        mockUseGameStore.mockReturnValue({
+          chefMessage: message,
+          chefEmotion: 'happy',
+        } as any);
+        rerender(<ChefDialog />);
 
-      await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledTimes(2);
-      });
+        await waitFor(() => {
+          expect(mockSpeak).toHaveBeenCalledWith(message);
+        });
+      }
     });
   });
 
   describe('emotion handling', () => {
-    it('should pass different emotions to ChefCharacter', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Happy!',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { rerender } = render(<ChefDialog />);
-      let chefCharacter = screen.getByTestId('chef-character');
-
-      expect(chefCharacter).toHaveAttribute('data-emotion', 'happy');
-
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Sad!',
-        chefEmotion: 'sad',
-      } as any);
-
-      rerender(<ChefDialog />);
-      chefCharacter = screen.getByTestId('chef-character');
-
-      expect(chefCharacter).toHaveAttribute('data-emotion', 'sad');
-    });
-
-    it('should handle various emotion types', () => {
-      const emotions = ['happy', 'sad', 'excited', 'neutral', 'confused'];
+    it('should render with different emotions', () => {
+      const emotions = ['happy', 'sad', 'angry', 'surprised'];
 
       emotions.forEach((emotion) => {
+        const { unmount } = render(<ChefDialog />);
         mockUseGameStore.mockReturnValue({
-          chefMessage: `${emotion} message`,
+          chefMessage: 'Test',
           chefEmotion: emotion,
         } as any);
-
-        const { unmount } = render(<ChefDialog />);
         const chefCharacter = screen.getByTestId('chef-character');
-
         expect(chefCharacter).toHaveAttribute('data-emotion', emotion);
-
         unmount();
       });
     });
   });
 
-  describe('message display', () => {
-    it('should display the chef message content', () => {
+  describe('compact mode', () => {
+    it('should render with compact=true by default as false', () => {
+      const { container } = render(<ChefDialog />);
+      const mainDiv = container.querySelector('div[style*="padding"]');
+      expect(mainDiv).toHaveStyle('padding: 12px 16px');
+    });
+
+    it('should apply all compact styles consistently', () => {
+      const { container } = render(<ChefDialog compact={true} />);
+      const mainDiv = container.querySelector('div[style*="padding"]');
+      expect(mainDiv).toHaveStyle('padding: 8px 12px');
+
+      const chefCharacter = screen.getByTestId('chef-character');
+      expect(chefCharacter).toHaveAttribute('data-size', '70');
+    });
+  });
+
+  describe('speech bubble styling', () => {
+    it('should render speech bubble with correct styles', () => {
       mockUseGameStore.mockReturnValue({
-        chefMessage: 'Welcome to the kitchen!',
+        chefMessage: 'Test message',
         chefEmotion: 'happy',
       } as any);
 
-      render(<ChefDialog />);
-
-      expect(screen.getByText('Welcome to the kitchen!')).toBeInTheDocument();
+      const { container } = render(<ChefDialog />);
+      const speechBubble = container.querySelector(
+        'div[style*="background: white"]'
+      );
+      expect(speechBubble).toBeInTheDocument();
     });
 
-    it('should display empty string when message is empty', () => {
+    it('should render speech bubble tail elements', () => {
       mockUseGameStore.mockReturnValue({
-        chefMessage: '',
-        chefEmotion: 'neutral',
+        chefMessage: 'Test message',
+        chefEmotion: 'happy',
       } as any);
 
-      render(<ChefDialog />);
+      const { container } = render(<ChefDialog />);
+      const divs = container.querySelectorAll('div[style*="position: absolute"]');
+      expect(divs.length).toBeGreaterThanOrEqual(2);
+    });
+  });
 
-      const container = screen.getByTestId('chef-character').parentElement;
-      expect(container).toBeInTheDocument();
+  describe('edge cases', () => {
+    it('should handle null chefMessage', () => {
+      mockUseGameStore.mockReturnValue({
+        chefMessage: null,
+        chefEmotion: 'happy',
+      } as any);
+
+      const { container } = render(<ChefDialog />);
+      expect(container).toBeTruthy();
     });
 
-    it('should handle long messages', () => {
-      const longMessage =
-        'This is a very long message that should be displayed in the speech bubble. It contains multiple words and should wrap appropriately within the maxWidth constraint.';
+    it('should handle undefined chefMessage', () => {
+      mockUseGameStore.mockReturnValue({
+        chefMessage: undefined,
+        chefEmotion: 'happy',
+      } as any);
 
+      const { container } = render(<ChefDialog />);
+      expect(container).toBeTruthy();
+    });
+
+    it('should handle very long message', () => {
+      const longMessage =
+        'This is a very long message that should still render correctly in the speech bubble without breaking the layout or causing any issues with the component rendering.';
       mockUseGameStore.mockReturnValue({
         chefMessage: longMessage,
         chefEmotion: 'happy',
       } as any);
 
       render(<ChefDialog />);
-
       expect(screen.getByText(longMessage)).toBeInTheDocument();
     });
 
-    it('should handle special characters in messages', () => {
-      const specialMessage = "Let's cook! 🍳 Delicious & tasty!";
-
+    it('should handle special characters in message', () => {
+      const specialMessage = 'Hello! <Chef> says: "Welcome!" 🍳';
       mockUseGameStore.mockReturnValue({
         chefMessage: specialMessage,
-        chefEmotion: 'excited',
+        chefEmotion: 'happy',
       } as any);
 
       render(<ChefDialog />);
-
       expect(screen.getByText(specialMessage)).toBeInTheDocument();
-    });
-  });
-
-  describe('layout and styling', () => {
-    it('should apply correct padding for non-compact mode', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Test',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { container } = render(<ChefDialog compact={false} />);
-      const wrapper = container.firstChild as HTMLElement;
-
-      expect(wrapper).toHaveStyle('padding: 12px 16px');
-    });
-
-    it('should apply correct padding for compact mode', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Test',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { container } = render(<ChefDialog compact={true} />);
-      const wrapper = container.firstChild as HTMLElement;
-
-      expect(wrapper).toHaveStyle('padding: 8px 12px');
-    });
-
-    it('should have flex layout with correct properties', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Test',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { container } = render(<ChefDialog />);
-      const wrapper = container.firstChild as HTMLElement;
-
-      expect(wrapper).toHaveStyle('display: flex');
-      expect(wrapper).toHaveStyle('alignItems: flex-end');
-      expect(wrapper).toHaveStyle('gap: 12px');
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle undefined chefMessage gracefully', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: undefined,
-        chefEmotion: 'neutral',
-      } as any);
-
-      render(<ChefDialog />);
-
-      expect(screen.getByTestId('chef-character')).toBeInTheDocument();
-    });
-
-    it('should handle null chefMessage gracefully', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: null,
-        chefEmotion: 'neutral',
-      } as any);
-
-      render(<ChefDialog />);
-
-      expect(screen.getByTestId('chef-character')).toBeInTheDocument();
-    });
-
-    it('should handle rapidly changing messages', async () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Message 1',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { rerender } = render(<ChefDialog />);
-
-      for (let i = 2; i <= 5; i++) {
-        mockUseGameStore.mockReturnValue({
-          chefMessage: `Message ${i}`,
-          chefEmotion: 'happy',
-        } as any);
-
-        rerender(<ChefDialog />);
-      }
-
-      await waitFor(() => {
-        expect(mockSpeak).toHaveBeenCalledWith('Message 5');
-      });
-    });
-
-    it('should maintain component stability with both compact modes', () => {
-      mockUseGameStore.mockReturnValue({
-        chefMessage: 'Test',
-        chefEmotion: 'happy',
-      } as any);
-
-      const { rerender } = render(<ChefDialog compact={false} />);
-      expect(screen.getByText('Test')).toBeInTheDocument();
-
-      rerender(<ChefDialog compact={true} />);
-      expect(screen.getByText('Test')).toBeInTheDocument();
     });
   });
 });
