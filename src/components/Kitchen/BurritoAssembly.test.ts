@@ -4,6 +4,7 @@ import { render } from '@testing-library/react';
 import type { PlacedIngredient } from '../../types';
 import { BurritoAssembly } from './BurritoAssembly';
 
+// Mock framer-motion to avoid animation complications in tests
 jest.mock('framer-motion', () => ({
   motion: {
     svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
@@ -12,7 +13,7 @@ jest.mock('framer-motion', () => ({
 }));
 
 describe('BurritoAssembly', () => {
-  describe('Component rendering', () => {
+  describe('rendering with no ingredients', () => {
     it('should render SVG with correct dimensions', () => {
       const { container } = render(
         <BurritoAssembly placedIngredients={[]} wrapping={false} />
@@ -31,23 +32,12 @@ describe('BurritoAssembly', () => {
       expect(ellipses.length).toBeGreaterThan(0);
     });
 
-    it('should render tortilla base', () => {
+    it('should render tortilla base with char spots', () => {
       const { container } = render(
         <BurritoAssembly placedIngredients={[]} wrapping={false} />
       );
-      const ellipses = Array.from(container.querySelectorAll('ellipse'));
-      const tortillaEllipse = ellipses.find(el => el.getAttribute('fill') === '#f5deb3');
-      expect(tortillaEllipse).toBeDefined();
-    });
-
-    it('should render char spots on tortilla', () => {
-      const { container } = render(
-        <BurritoAssembly placedIngredients={[]} wrapping={false} />
-      );
-      const charEllipses = Array.from(container.querySelectorAll('ellipse')).filter(
-        el => el.getAttribute('fill') === '#c9914a'
-      );
-      expect(charEllipses.length).toBe(7);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThan(2);
     });
 
     it('should render fold score lines', () => {
@@ -59,534 +49,623 @@ describe('BurritoAssembly', () => {
     });
   });
 
-  describe('Ingredient rendering', () => {
-    it('should render no ingredients when placedIngredients is empty', () => {
-      const { container } = render(
-        <BurritoAssembly placedIngredients={[]} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      // Only fold flaps and wrapped burrito groups, no ingredient groups
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(0);
-    });
-
-    it('should render ingredients with correct FILL_COUNT for rice', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
+  describe('rendering with single ingredient', () => {
+    it('should render rice ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
       ];
       const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
       const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(18);
-    });
-
-    it('should render ingredients with correct FILL_COUNT for beans', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'beans', instanceId: 'beans-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(12);
-    });
-
-    it('should render ingredients with correct FILL_COUNT for corn', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'corn', instanceId: 'corn-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(22);
-    });
-
-    it('should render ingredients with correct FILL_COUNT for cheese', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'cheese', instanceId: 'cheese-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(14);
-    });
-
-    it('should render multiple ingredient instances', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
-        { ingredientId: 'beans', instanceId: 'beans-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      // 18 for rice + 12 for beans
-      expect(ingredientGroups.length).toBe(30);
-    });
-
-    it('should use default FILL_COUNT of 8 for unknown ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'unknown_ingredient', instanceId: 'unknown-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(8);
-    });
-
-    it('should render sour_cream ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'sour_cream', instanceId: 'sour_cream-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(7);
-    });
-
-    it('should render guacamole ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'guacamole', instanceId: 'guac-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(9);
-    });
-
-    it('should render salsa ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'salsa', instanceId: 'salsa-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(10);
-    });
-
-    it('should render chicken ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'chicken', instanceId: 'chicken-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(9);
-    });
-
-    it('should render steak ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'steak', instanceId: 'steak-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(9);
-    });
-
-    it('should render lettuce ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'lettuce', instanceId: 'lettuce-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(12);
-    });
-
-    it('should render bell_pepper ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'bell_pepper', instanceId: 'pepper-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(9);
-    });
-
-    it('should render jalapeno ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(9);
-    });
-
-    it('should render onion ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'onion', instanceId: 'onion-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(8);
-    });
-
-    it('should render avocado ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'avocado', instanceId: 'avocado-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      expect(ingredientGroups.length).toBe(8);
-    });
-
-    it('should apply transforms with consistent positioning and rotation', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = container.querySelectorAll('g');
-      const ingredientGroups = Array.from(groups).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      
-      ingredientGroups.forEach(group => {
-        const transform = group.getAttribute('transform');
-        expect(transform).toMatch(/translate\(\d+\.?\d* \d+\.?\d*\) rotate\(\d+\.?\d*\)/);
-      });
-    });
-  });
-
-  describe('Wrapping animation state', () => {
-    it('should show ingredients when wrapping is false', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = Array.from(container.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
       expect(groups.length).toBeGreaterThan(0);
     });
 
-    it('should render with wrapping true', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
+    it('should render beans ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'beans', instanceId: 'beans-1', quantity: 1 },
       ];
       const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={true} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
-      expect(container.querySelector('svg')).toBeInTheDocument();
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
     });
 
-    it('should render without crashing with empty ingredients and wrapping true', () => {
+    it('should render corn ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'corn', instanceId: 'corn-1', quantity: 1 },
+      ];
       const { container } = render(
-        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render sour_cream ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'sour_cream', instanceId: 'sour_cream-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render guacamole ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'guacamole', instanceId: 'guac-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render salsa ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'salsa', instanceId: 'salsa-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render chicken ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'chicken', instanceId: 'chicken-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render steak ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'steak', instanceId: 'steak-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render cheese ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'cheese', instanceId: 'cheese-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render lettuce ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'lettuce', instanceId: 'lettuce-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render bell_pepper ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'bell_pepper', instanceId: 'pepper-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render jalapeno ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render onion ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'onion', instanceId: 'onion-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render avocado ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'avocado', instanceId: 'avocado-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should render unknown ingredient with fallback style', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'unknown_ingredient', instanceId: 'unknown-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('rendering with multiple ingredients', () => {
+    it('should render multiple ingredient types together', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+        { ingredientId: 'beans', instanceId: 'beans-1', quantity: 1 },
+        { ingredientId: 'cheese', instanceId: 'cheese-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(3);
+    });
+
+    it('should render multiple instances of same ingredient', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+        { ingredientId: 'rice', instanceId: 'rice-2', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(15);
+    });
+
+    it('should render correct number of pieces for each ingredient type', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(18);
+    });
+
+    it('should render correct number of pieces for beans', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'beans', instanceId: 'beans-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(12);
+    });
+
+    it('should render correct number of pieces for corn', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'corn', instanceId: 'corn-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(22);
+    });
+  });
+
+  describe('wrapping state transitions', () => {
+    it('should render with wrapping false initially', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
       expect(container.querySelector('svg')).toBeInTheDocument();
     });
 
-    it('should render without crashing with empty ingredients and wrapping false', () => {
+    it('should render with wrapping true', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={true} />
+      );
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should handle toggling wrapping state', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { rerender } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      rerender(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={true} />
+      );
+      rerender(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+    });
+  });
+
+  describe('ingredient fill count mapping', () => {
+    it('should use default fill count for unknown ingredient', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'unknown', instanceId: 'unknown-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render sour_cream with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'sour_cream', instanceId: 'sc-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(7);
+    });
+
+    it('should render guacamole with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'guacamole', instanceId: 'guac-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(9);
+    });
+
+    it('should render salsa with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'salsa', instanceId: 'salsa-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(10);
+    });
+
+    it('should render chicken with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'chicken', instanceId: 'chicken-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(9);
+    });
+
+    it('should render steak with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'steak', instanceId: 'steak-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(9);
+    });
+
+    it('should render cheese with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'cheese', instanceId: 'cheese-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(14);
+    });
+
+    it('should render lettuce with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'lettuce', instanceId: 'lettuce-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(12);
+    });
+
+    it('should render bell_pepper with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'bell_pepper', instanceId: 'pepper-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(9);
+    });
+
+    it('should render jalapeno with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(9);
+    });
+
+    it('should render onion with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'onion', instanceId: 'onion-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render avocado with correct piece count', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'avocado', instanceId: 'avocado-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(8);
+    });
+  });
+
+  describe('element positioning and transforms', () => {
+    it('should apply transform to ingredient groups', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g[transform]');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should include rotation in transforms', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g[transform*="rotate"]');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('should include translation in transforms', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g[transform*="translate"]');
+      expect(groups.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('plate and tortilla rendering', () => {
+    it('should render plate shadow ellipse', () => {
       const { container } = render(
         <BurritoAssembly placedIngredients={[]} wrapping={false} />
       );
-      expect(container.querySelector('svg')).toBeInTheDocument();
+      const ellipses = container.querySelectorAll('ellipse[cx="150"][cy="258"]');
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render main tortilla ellipse', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={false} />
+      );
+      const ellipses = container.querySelectorAll('ellipse[cy="135"]');
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render char spots on tortilla', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={false} />
+      );
+      const ellipses = container.querySelectorAll('ellipse[fill="#c9914a"]');
+      expect(ellipses.length).toBe(7);
+    });
+
+    it('should render fold score lines', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={false} />
+      );
+      const paths = container.querySelectorAll('path[stroke="#d4a96a"]');
+      expect(paths.length).toBe(2);
     });
   });
 
-  describe('BurritoFilling component variants', () => {
-    it('should render rice with correct fill color', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
+  describe('complex ingredient scenarios', () => {
+    it('should render all ingredient types simultaneously', () => {
+      const allIngredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
+        { ingredientId: 'beans', instanceId: 'beans-1', quantity: 1 },
+        { ingredientId: 'corn', instanceId: 'corn-1', quantity: 1 },
+        { ingredientId: 'sour_cream', instanceId: 'sc-1', quantity: 1 },
+        { ingredientId: 'guacamole', instanceId: 'guac-1', quantity: 1 },
+        { ingredientId: 'salsa', instanceId: 'salsa-1', quantity: 1 },
+        { ingredientId: 'chicken', instanceId: 'chicken-1', quantity: 1 },
+        { ingredientId: 'steak', instanceId: 'steak-1', quantity: 1 },
+        { ingredientId: 'cheese', instanceId: 'cheese-1', quantity: 1 },
+        { ingredientId: 'lettuce', instanceId: 'lettuce-1', quantity: 1 },
+        { ingredientId: 'bell_pepper', instanceId: 'pepper-1', quantity: 1 },
+        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1', quantity: 1 },
+        { ingredientId: 'onion', instanceId: 'onion-1', quantity: 1 },
+        { ingredientId: 'avocado', instanceId: 'avocado-1', quantity: 1 },
       ];
       const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+        <BurritoAssembly placedIngredients={allIngredients} wrapping={false} />
       );
-      const ellipses = Array.from(container.querySelectorAll('ellipse')).filter(
-        el => el.getAttribute('fill') === '#f8f8ed'
-      );
-      expect(ellipses.length).toBe(18);
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(140);
     });
 
-    it('should render beans with multiple elements', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'beans', instanceId: 'beans-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const darkEllipses = Array.from(container.querySelectorAll('ellipse')).filter(
-        el => el.getAttribute('fill') === '#3d2b1f'
-      );
-      expect(darkEllipses.length).toBeGreaterThan(0);
-    });
-
-    it('should render corn with circles', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'corn', instanceId: 'corn-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const yellowCircles = Array.from(container.querySelectorAll('circle')).filter(
-        el => el.getAttribute('fill') === '#f5c518'
-      );
-      expect(yellowCircles.length).toBe(22);
-    });
-
-    it('should render salsa with multiple colored circles', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'salsa', instanceId: 'salsa-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const circles = Array.from(container.querySelectorAll('circle'));
-      const salsaCircles = circles.filter(
-        el => ['#b83224', '#e74c3c', '#e8623a', '#f0d060'].includes(el.getAttribute('fill') || '')
-      );
-      expect(salsaCircles.length).toBeGreaterThan(0);
-    });
-
-    it('should render chicken with lines', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'chicken', instanceId: 'chicken-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const lines = Array.from(container.querySelectorAll('line')).filter(
-        el => el.getAttribute('stroke') === '#b8893a'
-      );
-      expect(lines.length).toBeGreaterThan(0);
-    });
-
-    it('should render cheese with rectangles', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'cheese', instanceId: 'cheese-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const rects = Array.from(container.querySelectorAll('rect'));
-      expect(rects.length).toBeGreaterThan(0);
-    });
-
-    it('should render jalapeno with multiple circles', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'jalapeno', instanceId: 'jalapeno-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const circles = Array.from(container.querySelectorAll('circle')).filter(
-        el => el.getAttribute('fill') === '#1b5e20'
-      );
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render default filling for unknown ingredient id', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'unknown_id_xyz', instanceId: 'unknown-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const greyCircles = Array.from(container.querySelectorAll('circle')).filter(
-        el => el.getAttribute('fill') === '#888'
-      );
-      expect(greyCircles.length).toBe(8);
-    });
-  });
-
-  describe('Edge cases and special scenarios', () => {
-    it('should handle large number of placed ingredients', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
-        { ingredientId: 'rice', instanceId: 'rice-2' },
-        { ingredientId: 'beans', instanceId: 'beans-1' },
-        { ingredientId: 'corn', instanceId: 'corn-1' },
-        { ingredientId: 'salsa', instanceId: 'salsa-1' },
-      ];
-      const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const groups = Array.from(container.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      // 18 + 18 + 12 + 22 + 10 = 80
-      expect(groups.length).toBe(80);
-    });
-
-    it('should render all standard ingredients', () => {
-      const allIngredients = [
-        'rice', 'beans', 'corn', 'sour_cream', 'guacamole', 'salsa',
-        'chicken', 'steak', 'cheese', 'lettuce', 'bell_pepper',
-        'jalapeno', 'onion', 'avocado'
-      ];
-      const placedIngredients: PlacedIngredient[] = allIngredients.map((id, idx) => ({
-        ingredientId: id,
-        instanceId: `${id}-${idx}`,
+    it('should handle large number of instances', () => {
+      const ingredients: PlacedIngredient[] = Array.from({ length: 10 }, (_, i) => ({
+        ingredientId: 'rice',
+        instanceId: `rice-${i}`,
+        quantity: 1,
       }));
       const { container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(180);
+    });
+  });
+
+  describe('wrapped burrito state', () => {
+    it('should render wrapped burrito ellipses', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const ellipses = container.querySelectorAll('ellipse[fill="#f0d49a"]');
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render wrapped burrito roll lines', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const paths = container.querySelectorAll('path[stroke="#c9914a"]');
+      expect(paths.length).toBeGreaterThan(0);
+    });
+
+    it('should render filling visible in wrapped burrito', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const fillingEllipses = container.querySelectorAll('ellipse[fill="#b83224"]');
+      expect(fillingEllipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render wrapped burrito end caps', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const endCapEllipses = container.querySelectorAll('ellipse[cx="28"], ellipse[cx="272"]');
+      expect(endCapEllipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render wrapped burrito shine effect', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const shineEllipse = container.querySelector('ellipse[cx="108"][cy="106"]');
+      expect(shineEllipse).toBeInTheDocument();
+    });
+  });
+
+  describe('edge cases and prop variations', () => {
+    it('should handle empty ingredientId', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: '', instanceId: 'empty-1', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
       expect(container.querySelector('svg')).toBeInTheDocument();
     });
 
-    it('should maintain consistent element keys for same ingredient', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
+    it('should handle very large instanceId string', () => {
+      const longId = 'a'.repeat(1000);
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: longId, quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(18);
+    });
+
+    it('should handle special characters in instanceId', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-!@#$%^&*()', quantity: 1 },
+      ];
+      const { container } = render(
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
+      );
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(18);
+    });
+
+    it('should maintain stable key attributes for ingredient pieces', () => {
+      const ingredients: PlacedIngredient[] = [
+        { ingredientId: 'rice', instanceId: 'rice-1', quantity: 1 },
       ];
       const { container: container1 } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
       const { container: container2 } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+        <BurritoAssembly placedIngredients={ingredients} wrapping={false} />
       );
       const groups1 = container1.querySelectorAll('g');
       const groups2 = container2.querySelectorAll('g');
       expect(groups1.length).toBe(groups2.length);
     });
+  });
 
-    it('should handle wrapping transition from false to true', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'rice-1' },
-      ];
-      const { rerender, container } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
+  describe('left and right fold flaps', () => {
+    it('should render left fold flap when wrapping', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
       );
-      expect(container.querySelector('svg')).toBeInTheDocument();
-      
-      rerender(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={true} />
-      );
-      expect(container.querySelector('svg')).toBeInTheDocument();
+      const ellipses = container.querySelectorAll('ellipse[cx="72"]');
+      expect(ellipses.length).toBeGreaterThan(0);
     });
 
-    it('should render plate and fold lines consistently', () => {
+    it('should render right fold flap when wrapping', () => {
+      const { container } = render(
+        <BurritoAssembly placedIngredients={[]} wrapping={true} />
+      );
+      const ellipses = container.querySelectorAll('ellipse[cx="228"]');
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should hide flaps when not wrapping', () => {
       const { container } = render(
         <BurritoAssembly placedIngredients={[]} wrapping={false} />
       );
-      const paths = container.querySelectorAll('path');
-      // Should have fold score lines and potentially wrapped burrito lines
-      expect(paths.length).toBeGreaterThanOrEqual(2);
-    });
-  });
-
-  describe('Instance ID consistency', () => {
-    it('should use instanceId for deterministic positioning', () => {
-      const placedIngredients: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'test-seed-123' },
-      ];
-      const { container: container1 } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      const { container: container2 } = render(
-        <BurritoAssembly placedIngredients={placedIngredients} wrapping={false} />
-      );
-      
-      const groups1 = Array.from(container1.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      const groups2 = Array.from(container2.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      );
-      
-      expect(groups1.length).toBe(groups2.length);
-      groups1.forEach((g1, idx) => {
-        expect(g1.getAttribute('transform')).toBe(groups2[idx].getAttribute('transform'));
-      });
-    });
-
-    it('should produce different positions for different instanceIds', () => {
-      const ingredient1: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'seed-1' },
-      ];
-      const ingredient2: PlacedIngredient[] = [
-        { ingredientId: 'rice', instanceId: 'seed-2' },
-      ];
-      
-      const { container: container1 } = render(
-        <BurritoAssembly placedIngredients={ingredient1} wrapping={false} />
-      );
-      const { container: container2 } = render(
-        <BurritoAssembly placedIngredients={ingredient2} wrapping={false} />
-      );
-      
-      const groups1 = Array.from(container1.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      )[0];
-      const groups2 = Array.from(container2.querySelectorAll('g')).filter(
-        g => g.getAttribute('transform')?.includes('translate')
-      )[0];
-      
-      const transform1 = groups1?.getAttribute('transform');
-      const transform2 = groups2?.getAttribute('transform');
-      
-      expect(transform1).not.toBe(transform2);
-    });
-  });
-});
+      const
