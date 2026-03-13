@@ -24,7 +24,7 @@ export const MathQuiz = () => {
   const getIngName = (id: string) => t.ingredients[id] ?? id;
 
   const questions = useMemo(
-    () => generateQuestions(placedIngredients, familySize, pizzaSlices, t.mathQuiz, mealName, getIngName),
+    () => generateQuestions(placedIngredients, familySize, pizzaSlices, t.mathQuiz, mealName, getIngName, selectedMeal ?? undefined, language),
     [language] // regenerate when language changes (quiz restarts anyway)
   );
 

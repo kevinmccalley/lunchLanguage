@@ -8,7 +8,9 @@ import { ChefDialog } from '../Chef/ChefDialog';
 import { Button } from '../UI/Button';
 import { StarScore } from '../UI/StarScore';
 import { useT } from '../../i18n/useT';
+import { useLanguageStore } from '../../store/languageStore';
 import { useSpeech } from '../../hooks/useSpeech';
+import { getMealCostUSD, formatPrice } from '../../utils/currency';
 
 export const Kitchen = () => {
   const {
@@ -19,6 +21,7 @@ export const Kitchen = () => {
   const plateRef = useRef<HTMLDivElement>(null);
   const meal = getMealInfo(selectedMeal!);
   const t = useT();
+  const { language } = useLanguageStore();
   const mealName = t.meals[selectedMeal!].name;
   const { speak } = useSpeech();
   const [showSlicePicker, setShowSlicePicker] = useState(false);
@@ -97,6 +100,18 @@ export const Kitchen = () => {
         }}>
           {t.kitchen.forPeople(familySize)}
         </div>
+
+        <motion.div
+          key={ingredientCount}
+          animate={{ scale: [1, 1.15, 1] }}
+          style={{
+            background: '#fff8e1', border: '2px solid #f9a825',
+            borderRadius: 10, padding: '3px 10px', fontSize: 13,
+            fontWeight: 700, color: '#f57f17',
+          }}
+        >
+          💰 {formatPrice(getMealCostUSD(selectedMeal!, ingredientCount), language)}
+        </motion.div>
 
         {meal.hasSlices && (
           <button

@@ -4,6 +4,8 @@ import { useGameStore } from '../../store/gameStore';
 import { getMealInfo } from '../../data/meals';
 import { getIngredientById } from '../../data/ingredients';
 import { useT } from '../../i18n/useT';
+import { useLanguageStore } from '../../store/languageStore';
+import { getMealCostUSD, formatPrice } from '../../utils/currency';
 import { MealHeroIllustration } from './MealHeroIllustration';
 
 // 20 particles scattered in a circle — fixed angles so they're deterministic
@@ -15,6 +17,7 @@ export const MealSplash = () => {
   const { selectedMeal, placedIngredients, setPhase } = useGameStore();
   const meal = getMealInfo(selectedMeal!);
   const t = useT();
+  const { language } = useLanguageStore();
 
   // Auto-advance after 7 seconds
   useEffect(() => {
@@ -173,10 +176,25 @@ export const MealSplash = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.0 }}
-          style={{ fontSize: 16, fontWeight: 600, color: '#444', margin: '0 0 18px' }}
+          style={{ fontSize: 16, fontWeight: 600, color: '#444', margin: '0 0 8px' }}
         >
           {t.splash.tagline}
         </motion.p>
+
+        {/* Price badge */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.3, type: 'spring', stiffness: 300, damping: 18 }}
+          style={{
+            display: 'inline-block',
+            background: '#fff8e1', border: `2px solid #f9a825`,
+            borderRadius: 20, padding: '5px 16px', fontSize: 18,
+            fontWeight: 800, color: '#f57f17', margin: '0 0 18px',
+          }}
+        >
+          💰 {formatPrice(getMealCostUSD(selectedMeal!, placedIngredients.length), language)}
+        </motion.div>
 
         {/* Pulsing continue prompt */}
         <motion.p

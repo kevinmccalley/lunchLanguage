@@ -1,5 +1,6 @@
-import type { MathQuestion, PlacedIngredient } from '../../types';
-import type { MathQuizT } from '../../i18n/types';
+import type { MathQuestion, PlacedIngredient, MealType } from '../../types';
+import type { MathQuizT, Language } from '../../i18n/types';
+import { CURRENCY, MEAL_BASE_PRICE, getMealCostUSD } from '../../utils/currency';
 
 export const generateQuestions = (
   placedIngredients: PlacedIngredient[],
@@ -7,7 +8,9 @@ export const generateQuestions = (
   pizzaSlices: number,
   qt: MathQuizT,
   mealName: string,
-  getIngName: (id: string) => string
+  getIngName: (id: string) => string,
+  mealId?: MealType,
+  language?: Language,
 ): MathQuestion[] => {
   const questions: MathQuestion[] = [];
 
@@ -158,5 +161,78 @@ export const generateQuestions = (
     });
   }
 
-  return questions.slice(0, 6);
+  // ── Currency questions (up to 2) ─────────────────────────────────────────
+  const currencyQs: MathQuestion[] = [];
+
+  if (mealId && language) {
+    const c = CURRENCY[language];
+    const costUSD = getMealCostUSD(mealId, total);
+    const baseUnits = Math.round(MEAL_BASE_PRICE[mealId] * c.mathMult);
+    const extraUnits = total * c.ingCost;
+    const totalUnits = baseUnits + extraUnits;
+
+    // Currency Q1 — ingredient cost (multiplication: count × ingCost)
+    if (total > 0 && total * c.ingCost <= 999) {
+      currencyQs.push({
+        id: 'ing_cost',
+        type: 'multiply',
+        question: qt.qIngCost(total, c.ingCost, c.unitLabel),
+        answer: total * c.ingCost,
+        hint: qt.hIngCost(total, c.ingCost),
+        visual: '💰',
+      });
+    }
+
+    // Currency Q2 — meal total cost (addition: base + extra, in math units)
+    if (totalUnits <= 999) {
+      currencyQs.push({
+        id: 'meal_cost',
+        type: 'count',
+        question: qt.qMealCost(mealName, baseUnits, total, c.ingCost, c.unitLabel),
+        answer: totalUnits,
+        hint: qt.hMealCost(baseUnits, extraUnits),
+        visual: '🧾',
+      });
+    }
+
+    // Currency Q3 — family cost (multiply whole display price × family)
+    const wholeDisplayCost = Math.round(costUSD * c.displayMult);
+    const familyCostAnswer = wholeDisplayCost * familySize;
+    if (familySize > 1 && familyCostAnswer <= 999) {
+      const costStr = `${c.symbol}${wholeDisplayCost}`;
+      currencyQs.push({
+        id: 'family_cost',
+        type: 'multiply',
+        question: qt.qFamilyCost(costStr, familySize),
+        answer: familyCostAnswer,
+        hint: qt.hFamilyCost(wholeDisplayCost, familySize),
+        visual: '👨‍👩‍👧',
+      });
+    }
+
+    // Currency Q4 — change (pick smallest bill larger than cost)
+    const bill = c.bills.find(b => b > wholeDisplayCost);
+    if (bill !== undefined) {
+      const change = bill - wholeDisplayCost;
+      if (change > 0 && change <= 999) {
+        const billStr = `${c.symbol}${bill}`;
+        const costStr = `${c.symbol}${wholeDisplayCost}`;
+        currencyQs.push({
+          id: 'change',
+          type: 'count',
+          question: qt.qChange(billStr, costStr),
+          answer: change,
+          hint: qt.hChange(bill, wholeDisplayCost),
+          visual: '🪙',
+        });
+      }
+    }
+  }
+
+  // Insert up to 2 currency questions after Q1 (total count)
+  const [q1, ...rest] = questions;
+  const selected = currencyQs.slice(0, 2);
+  const combined = [q1, ...selected, ...rest];
+
+  return combined.slice(0, 8);
 };

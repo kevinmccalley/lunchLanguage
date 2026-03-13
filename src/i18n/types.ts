@@ -32,6 +32,15 @@ export interface MathQuizT {
   hCompare: (a: number, b: number) => string;
   hCombined: (cA: number, cB: number) => string;
   hNotType: (total: number, count: number) => string;
+  // Currency questions
+  qIngCost:    (count: number, ingCost: number, unit: string) => string;
+  qMealCost:   (meal: string, base: number, count: number, ingCost: number, unit: string) => string;
+  qFamilyCost: (costStr: string, n: number) => string;
+  qChange:     (billStr: string, costStr: string) => string;
+  hIngCost:    (count: number, ingCost: number) => string;
+  hMealCost:   (base: number, extra: number) => string;
+  hFamilyCost: (cost: number, n: number) => string;
+  hChange:     (bill: number, cost: number) => string;
 }
 
 export interface Translations {
