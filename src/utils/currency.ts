@@ -25,7 +25,8 @@ export interface CurrencyConfig {
 }
 
 export const CURRENCY: Record<Language, CurrencyConfig> = {
-  en:      { symbol: '$',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'cents',     bills: [10, 20] },
+  'en-US': { symbol: '$',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'cents',     bills: [10, 20] },
+  'en-GB': { symbol: '£',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'pence',     bills: [10, 20] },
   es:      { symbol: '€',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'céntimos',  bills: [10, 20] },
   fr:      { symbol: '€',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'centimes',  bills: [10, 20] },
   de:      { symbol: '€',  displayMult: 1,   displayDecimals: 2, mathMult: 100, ingCost: 5, unitLabel: 'Cent',      bills: [10, 20] },

@@ -6,10 +6,12 @@ import { LANGUAGE_OPTIONS } from '../../i18n/translations';
 import { useT } from '../../i18n/useT';
 import type { Language } from '../../i18n/types';
 
-// Human-readable region label so Portugal and Brazil are distinguishable
+// Human-readable region label so similar-language options are distinguishable
 const REGION_LABEL: Partial<Record<Language, string>> = {
-  pt:     'PT',
-  'pt-BR':'BR',
+  'en-US': 'US',
+  'en-GB': 'GB',
+  pt:      'PT',
+  'pt-BR': 'BR',
 };
 
 const Flag = ({ countryCode, size = 28 }: { countryCode: string; size?: number }) => (

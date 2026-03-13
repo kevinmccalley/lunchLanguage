@@ -4,7 +4,8 @@ import type { Language } from '../i18n/types';
 
 /** Maps our Language codes to BCP-47 tags that SpeechSynthesis understands. */
 export const LANG_BCP47: Record<Language, string> = {
-  en:      'en-GB',
+  'en-US': 'en-US',
+  'en-GB': 'en-GB',
   es:      'es-ES',
   fr:      'fr-FR',
   de:      'de-DE',

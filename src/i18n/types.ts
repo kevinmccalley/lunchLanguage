@@ -1,4 +1,4 @@
-export type Language = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'pt' | 'pt-BR';
+export type Language = 'en-US' | 'en-GB' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'pt' | 'pt-BR';
 
 export interface MathQuizT {
   title: string;

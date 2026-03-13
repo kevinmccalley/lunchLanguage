@@ -1,7 +1,7 @@
 import type { Language, Translations } from './types';
 
-// ─── English ────────────────────────────────────────────────────────────────
-const en: Translations = {
+// ─── English (US) ────────────────────────────────────────────────────────────
+const enUS: Translations = {
   chef: {
     greeting: "Hi there! I'm Chef Zesty! Ready to cook something delicious?",
   },
@@ -124,7 +124,149 @@ const en: Translations = {
     isInLanguage: (word, translation, langName) => `${word} is "${translation}" in ${langName}`,
   },
   langNames: {
-    en:'English', es:'Spanish', fr:'French', de:'German',
+    'en-US':'English (US)', 'en-GB':'English (GB)', es:'Spanish', fr:'French', de:'German',
+    ja:'Japanese', zh:'Chinese', pt:'Portuguese (PT)', 'pt-BR':'Portuguese (BR)',
+  },
+  splash: {
+    heading:       (meal) => `Your ${meal} is ready! 🎉`,
+    tagline:       'What a masterpiece — now let\'s count!',
+    tapToContinue: 'Tap anywhere to continue →',
+  },
+  setup: {
+    title: 'Welcome to Lunch Language!',
+    nativePrompt: 'What language do you speak?',
+    learningPrompt: 'What language would you like to learn?',
+    skipLearning: 'Skip — just play the game!',
+    confirm: "Let's go!",
+    speechLabel: 'Read instructions aloud',
+  },
+};
+
+// ─── English (GB) ────────────────────────────────────────────────────────────
+const enGB: Translations = {
+  chef: {
+    greeting: "Hi there! I'm Chef Zesty! Ready to cook something delicious?",
+  },
+  welcome: {
+    title: 'Lunch Language',
+    subtitle: "Cook your favourite lunch & practise maths with Chef Zesty!",
+    startButton: "Let's Cook! 👨‍🍳",
+    mealBadges: ['🍕 Pizza','🍔 Burgers','🥗 Salads','🍱 Sushi','🌯 Burritos','🥪 Sandwiches'],
+    pickMessage: "Wonderful! Pick the meal you'd like to make today!",
+  },
+  mealSelect: {
+    title: "🍽️ What's for Lunch?",
+    prompt: "Pick your favourite meal to cook!",
+  },
+  meals: {
+    pizza:     { name: 'Pizza',     description: 'Round & cheesy!',   chefIntro: "Mamma mia! Let's make a delicious pizza! Drag your favourite toppings onto the dough!" },
+    hamburger: { name: 'Hamburger', description: 'Stack it high!',    chefIntro: "Crikey! We're building the greatest burger in town! Pile on those toppings!" },
+    burrito:   { name: 'Burrito',   description: 'Wrap it up!',       chefIntro: "¡Hola amigo! Time to make the most amazing burrito! Wrap up all your favourite fillings!" },
+    salad:     { name: 'Salad',     description: 'Fresh & healthy!',  chefIntro: "Ooh la la! A beautiful salad! Toss in all the colourful veggies you love!" },
+    sushi:     { name: 'Sushi',     description: 'Roll with it!',     chefIntro: "Irasshaimase! Welcome to my sushi kitchen! Let's create the perfect sushi roll!" },
+    sandwich:  { name: 'Sandwich',  description: 'Layer by layer!',   chefIntro: "Right-o! Let's build a cracking sandwich! Layer those lovely ingredients!" },
+  },
+  family: {
+    title: "Who's eating?",
+    prompt: "How many people are eating?",
+    justMe:     "Just me!",
+    smallGroup: "A small group!",
+    bigFamily:  "A big family!",
+    startButton:"Let's Cook! 👨‍🍳",
+    singleMessage: (meal) => `Great! Let's make a ${meal} just for you! Drag ingredients onto your ${meal}!`,
+    multiMessage:  (meal, n) => `Wonderful! We'll make ${meal} for ${n} people! Remember, you'll need to count carefully!`,
+  },
+  kitchen: {
+    myMeal:        (meal) => `My ${meal}`,
+    ingredients:   (n)    => `🧺 ${n} ingredient${n !== 1 ? 's' : ''}`,
+    forPeople:     (n)    => `👨‍👩‍👧 For ${n} ${n === 1 ? 'person' : 'people'}`,
+    slices:        (n)    => `🍕 ${n} slices`,
+    addHint:       "Tap an ingredient to add it →",
+    doneButton:    "I'm done cooking! Let's count! 🔢",
+    doubleTapHint: "Double-tap to remove 🗑️",
+    emptyWarning:  "Don't forget to add some ingredients first! Tap them from the shelf below!",
+    doneMessage:   "Amazing work! Now let's test your counting skills!",
+    back:          "←",
+  },
+  mathQuiz: {
+    title:    "🔢 Math Time!",
+    questionOf: (n, t) => `QUESTION ${n} OF ${t}`,
+    hintPrefix: "💡 Hint:",
+    skipButton: "Skip this one",
+    correctMessages: [
+      "🎉 Fantastic! You're a maths superstar!",
+      "⭐ Brilliant! That's absolutely correct!",
+      "🌟 Amazing job! You nailed it!",
+      "🎊 Wahey! You're so clever!",
+      "💫 Perfect! You're a cooking genius!",
+    ],
+    wrongMessages: [
+      "Not quite — but you're SO close! Give it another try!",
+      "Hmm, let me give you a hint! You can do it!",
+      "Almost! Check my hint and try again!",
+      "Keep going! Every great chef learns by trying!",
+    ],
+    finalMessage: "You finished all the questions! What an incredible chef and mathematician! 🏆",
+    nextMessage:  "Next question! You've got this!",
+    skipReveal:   (a) => `The answer was ${a}! Keep going — you're doing great!`,
+    qTotal:            (meal) => `How many ingredients did you add to your ${meal} in total?`,
+    qCountIngredient:  (name, emoji, meal) => `How many ${name}s are on your ${meal}? ${emoji}`,
+    qPerSlice:         (slices, name, emoji, _count) => `You divided your pizza into ${slices} slices. If the ${emoji} ${name}s are shared equally, how many are on each slice?`,
+    qHowManySlices:    (slices) => `Your pizza has ${slices} slices. How many slices are there?`,
+    qFamilyMultiply:   (n, count, emoji, name) => `You're cooking for ${n} people! You used ${count} ${emoji} ${name}${count > 1 ? 's' : ''} for 1 person. How many ${name}s do you need for everyone?`,
+    qTotalFamily:      (total, meal, n) => `If everyone gets the same ${meal}, and you used ${total} ingredients total, how many ingredients do you need for ${n} people?`,
+    qUniqueTypes:      (meal) => `How many different types of ingredients did you use in your ${meal}?`,
+    qCompare:          (cA, eA, nA, cB, eB, nB) => `You have ${cA} ${eA} ${nA}${cA > 1 ? 's' : ''} and ${cB} ${eB} ${nB}${cB > 1 ? 's' : ''}. How many more ${nA}s than ${nB}s?`,
+    hTotal:            (meal) => `Count every single ingredient on your ${meal}!`,
+    hCountIngredient:  (name) => `Look carefully and count just the ${name}s!`,
+    hPerSlice:         (count, slices) => `Divide ${count} by ${slices}. ${count} ÷ ${slices} = ?`,
+    hHowManySlices:    "Count the lines that divide the pizza!",
+    hFamilyMultiply:   (count, n) => `${count} × ${n} = ? (multiply ingredients by people!)`,
+    hTotalFamily:      (total, n) => `${total} × ${n} = ? (multiply total ingredients by people!)`,
+    hUniqueTypes:      "Count the different kinds of ingredients — not the total!",
+    hCompare:          (a, b) => `Subtract: ${a} − ${b} = ?`,
+    qCombined:         (cA, nA, cB, nB) => `You used ${cA} ${nA}${cA > 1 ? 's' : ''} and ${cB} ${nB}${cB > 1 ? 's' : ''}. How many of those two types combined?`,
+    qNotType:          (total, count, name, meal) => `Your ${meal} has ${total} ingredients total. ${count} ${count === 1 ? 'is' : 'are'} ${name}. How many are NOT ${name}?`,
+    hCombined:         (cA, cB) => `Add them together: ${cA} + ${cB} = ?`,
+    hNotType:          (total, count) => `Subtract: ${total} − ${count} = ?`,
+    qIngCost:    (count, ingCost, unit) => `You used ${count} ingredient${count !== 1 ? 's' : ''}. Each one costs ${ingCost} ${unit}. How many ${unit} is that in total?`,
+    qMealCost:   (meal, base, count, ingCost, unit) => `Your ${meal} base costs ${base} ${unit}. You added ${count} ingredient${count !== 1 ? 's' : ''} at ${ingCost} ${unit} each. What is the total in ${unit}?`,
+    qFamilyCost: (costStr, n) => `One meal costs ${costStr}. How much would it cost for ${n} ${n === 1 ? 'person' : 'people'}?`,
+    qChange:     (billStr, costStr) => `You pay ${billStr}. Your meal costs ${costStr}. How much change do you get?`,
+    hIngCost:    (count, ingCost) => `Multiply: ${count} × ${ingCost} = ?`,
+    hMealCost:   (base, extra) => `Add them: ${base} + ${extra} = ?`,
+    hFamilyCost: (cost, n) => `Multiply: ${cost} × ${n} = ?`,
+    hChange:     (bill, cost) => `Subtract: ${bill} − ${cost} = ?`,
+  },
+  score: { correct: "correct!" },
+  celebration: {
+    title:       "You Did It!",
+    subtitle:    (emoji, meal) => `You cooked an amazing ${emoji} ${meal} and aced your maths questions!`,
+    points:      "POINTS",
+    correct:     "CORRECT",
+    ingredients: "INGREDIENTS",
+    newMeal:     "New Meal",
+    playAgain:   "Play Again! 🔄",
+  },
+  ingredients: {
+    pepperoni:'Pepperoni', mushroom:'Mushroom', olive:'Olive', bell_pepper:'Bell Pepper',
+    cheese:'Cheese', tomato_slice:'Tomato', pineapple:'Pineapple', jalapeno:'Jalapeño',
+    basil:'Basil', sausage:'Sausage', beef_patty:'Beef Patty', lettuce:'Lettuce',
+    onion:'Onion', pickle:'Pickle', ketchup:'Ketchup', mustard:'Mustard', bacon:'Bacon',
+    egg_fried:'Fried Egg', avocado:'Avocado', rice:'Rice', beans:'Black Beans', corn:'Corn',
+    sour_cream:'Sour Cream', guacamole:'Guacamole', salsa:'Salsa', chicken:'Chicken',
+    steak:'Steak', croutons:'Croutons', cucumber:'Cucumber', carrot:'Carrot', radish:'Radish',
+    cherry_tom:'Cherry Tomato', dressing:'Dressing', walnuts:'Walnuts', strawberry:'Strawberry',
+    salmon:'Salmon', tuna:'Tuna', shrimp:'Shrimp', seaweed:'Seaweed',
+    cream_cheese:'Cream Cheese', soy_sauce:'Soy Sauce', wasabi:'Wasabi', ginger:'Ginger',
+    turkey:'Turkey', ham:'Ham', mayo:'Mayo', spinach:'Spinach', swiss:'Swiss Cheese',
+    sprouts:'Sprouts',
+  },
+  tooltip: {
+    isInLanguage: (word, translation, langName) => `${word} is "${translation}" in ${langName}`,
+  },
+  langNames: {
+    'en-US':'English (US)', 'en-GB':'English (GB)', es:'Spanish', fr:'French', de:'German',
     ja:'Japanese', zh:'Chinese', pt:'Portuguese (PT)', 'pt-BR':'Portuguese (BR)',
   },
   splash: {
@@ -266,7 +408,7 @@ const es: Translations = {
     isInLanguage: (word, translation, langName) => `${word} es "${translation}" en ${langName}`,
   },
   langNames: {
-    en:'Inglés', es:'Español', fr:'Francés', de:'Alemán',
+    'en-US':'Inglés (EE. UU.)', 'en-GB':'Inglés (GB)', es:'Español', fr:'Francés', de:'Alemán',
     ja:'Japonés', zh:'Chino', pt:'Portugués (PT)', 'pt-BR':'Portugués (BR)',
   },
   splash: {
@@ -408,7 +550,7 @@ const fr: Translations = {
     isInLanguage: (word, translation, langName) => `${word} est "${translation}" en ${langName}`,
   },
   langNames: {
-    en:'Anglais', es:'Espagnol', fr:'Français', de:'Allemand',
+    'en-US':'Anglais (US)', 'en-GB':'Anglais (GB)', es:'Espagnol', fr:'Français', de:'Allemand',
     ja:'Japonais', zh:'Chinois', pt:'Portugais (PT)', 'pt-BR':'Portugais (BR)',
   },
   splash: {
@@ -550,7 +692,7 @@ const de: Translations = {
     isInLanguage: (word, translation, langName) => `${word} ist "${translation}" auf ${langName}`,
   },
   langNames: {
-    en:'Englisch', es:'Spanisch', fr:'Französisch', de:'Deutsch',
+    'en-US':'Englisch (US)', 'en-GB':'Englisch (GB)', es:'Spanisch', fr:'Französisch', de:'Deutsch',
     ja:'Japanisch', zh:'Chinesisch', pt:'Portugiesisch (PT)', 'pt-BR':'Portugiesisch (BR)',
   },
   splash: {
@@ -692,7 +834,7 @@ const ja: Translations = {
     isInLanguage: (word, translation, langName) => `${word}は${langName}で「${translation}」です`,
   },
   langNames: {
-    en:'英語', es:'スペイン語', fr:'フランス語', de:'ドイツ語',
+    'en-US':'英語 (US)', 'en-GB':'英語 (GB)', es:'スペイン語', fr:'フランス語', de:'ドイツ語',
     ja:'日本語', zh:'中国語', pt:'ポルトガル語 (PT)', 'pt-BR':'ポルトガル語 (BR)',
   },
   splash: {
@@ -834,7 +976,7 @@ const zh: Translations = {
     isInLanguage: (word, translation, langName) => `${word}的${langName}是"${translation}"`,
   },
   langNames: {
-    en:'英语', es:'西班牙语', fr:'法语', de:'德语',
+    'en-US':'英语 (US)', 'en-GB':'英语 (GB)', es:'西班牙语', fr:'法语', de:'德语',
     ja:'日语', zh:'中文', pt:'葡萄牙语 (PT)', 'pt-BR':'葡萄牙语 (BR)',
   },
   splash: {
@@ -976,7 +1118,7 @@ const pt: Translations = {
     isInLanguage: (word, translation, langName) => `${word} é "${translation}" em ${langName}`,
   },
   langNames: {
-    en:'Inglês', es:'Espanhol', fr:'Francês', de:'Alemão',
+    'en-US':'Inglês (EUA)', 'en-GB':'Inglês (GB)', es:'Espanhol', fr:'Francês', de:'Alemão',
     ja:'Japonês', zh:'Chinês', pt:'Português (PT)', 'pt-BR':'Português (BR)',
   },
   splash: {
@@ -1118,7 +1260,7 @@ const ptBR: Translations = {
     isInLanguage: (word, translation, langName) => `${word} é "${translation}" em ${langName}`,
   },
   langNames: {
-    en:'Inglês', es:'Espanhol', fr:'Francês', de:'Alemão',
+    'en-US':'Inglês (EUA)', 'en-GB':'Inglês (GB)', es:'Espanhol', fr:'Francês', de:'Alemão',
     ja:'Japonês', zh:'Chinês', pt:'Português (PT)', 'pt-BR':'Português (BR)',
   },
   splash: {
@@ -1137,10 +1279,11 @@ const ptBR: Translations = {
 };
 
 // ─── Export ───────────────────────────────────────────────────────────────────
-export const TRANSLATIONS: Record<Language, Translations> = { en, es, fr, de, ja, zh, pt, 'pt-BR': ptBR };
+export const TRANSLATIONS: Record<Language, Translations> = { 'en-US': enUS, 'en-GB': enGB, es, fr, de, ja, zh, pt, 'pt-BR': ptBR };
 
 export const LANGUAGE_OPTIONS: { code: Language; label: string; countryCode: string }[] = [
-  { code: 'en',    label: 'English',    countryCode: 'GB' },
+  { code: 'en-US', label: 'English',    countryCode: 'US' },
+  { code: 'en-GB', label: 'English',    countryCode: 'GB' },
   { code: 'es',    label: 'Español',    countryCode: 'ES' },
   { code: 'fr',    label: 'Français',   countryCode: 'FR' },
   { code: 'de',    label: 'Deutsch',    countryCode: 'DE' },
