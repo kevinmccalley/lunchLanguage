@@ -29,6 +29,14 @@ export const useLanguageStore = create<LanguageStore>()(
       setHasCompletedSetup:  (hasCompletedSetup)=> set({ hasCompletedSetup }),
       setShowSetup:          (showSetup)        => set({ showSetup }),
     }),
-    { name: 'lunch-language-lang' }
+    {
+      name: 'lunch-language-lang',
+      migrate: (s: unknown) => {
+        const state = s as Record<string, unknown>;
+        if (state.language === 'en') state.language = 'en-US';
+        if (state.learningLanguage === 'en') state.learningLanguage = 'en-US';
+        return state;
+      },
+    }
   )
 );

@@ -4,5 +4,5 @@ import type { Translations } from './types';
 
 export const useT = (): Translations => {
   const { language } = useLanguageStore();
-  return TRANSLATIONS[language];
+  return TRANSLATIONS[language] ?? TRANSLATIONS['en-US'];
 };
