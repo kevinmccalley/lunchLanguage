@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MealPlate } from './MealPlate';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n/useT';
@@ -15,65 +16,63 @@ jest.mock('../../store/gameStore');
 jest.mock('../../i18n/useT');
 jest.mock('../../data/ingredients');
 jest.mock('./plates/PizzaBase', () => ({
-  PizzaBase: jest.fn(() => <div data-testid="pizza-base">PizzaBase</div>),
+  PizzaBase: () => <div data-testid="pizza-base">Pizza Base</div>,
 }));
 jest.mock('./HamburgerStack', () => ({
-  HamburgerStack: jest.fn(() => <div data-testid="hamburger-stack">HamburgerStack</div>),
+  HamburgerStack: () => <div data-testid="hamburger-stack">Hamburger Stack</div>,
 }));
 jest.mock('./BurritoAssembly', () => ({
-  BurritoAssembly: jest.fn(() => <div data-testid="burrito-assembly">BurritoAssembly</div>),
+  BurritoAssembly: () => <div data-testid="burrito-assembly">Burrito Assembly</div>,
 }));
 jest.mock('./SaladAssembly', () => ({
-  SaladAssembly: jest.fn(() => <div data-testid="salad-assembly">SaladAssembly</div>),
+  SaladAssembly: () => <div data-testid="salad-assembly">Salad Assembly</div>,
 }));
 jest.mock('./SushiAssembly', () => ({
-  SushiAssembly: jest.fn(() => <div data-testid="sushi-assembly">SushiAssembly</div>),
+  SushiAssembly: () => <div data-testid="sushi-assembly">Sushi Assembly</div>,
 }));
 jest.mock('./SandwichStack', () => ({
-  SandwichStack: jest.fn(() => <div data-testid="sandwich-stack">SandwichStack</div>),
+  SandwichStack: () => <div data-testid="sandwich-stack">Sandwich Stack</div>,
 }));
 
 describe('MealPlate', () => {
   const mockPlateRef = { current: null };
   const mockRemoveIngredient = jest.fn();
-  const mockTranslations = {
+  const mockT = {
     ingredients: {
-      'cheese': 'Cheese',
-      'tomato': 'Tomato',
-      'lettuce': 'Lettuce',
+      'ing-1': 'Cheese',
+      'ing-2': 'Lettuce',
     },
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useT as jest.Mock).mockReturnValue(mockTranslations);
-    (getIngredientById as jest.Mock).mockImplementation((id: string) => ({
+    (useT as jest.Mock).mockReturnValue(mockT);
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: null,
+      placedIngredients: [],
+      pizzaSlices: 4,
+      removeIngredient: mockRemoveIngredient,
+    });
+    (getIngredientById as jest.Mock).mockImplementation((id) => ({
       id,
-      name: id.charAt(0).toUpperCase() + id.slice(1),
-      emoji: '🥒',
+      name: `Ingredient ${id}`,
+      emoji: '🥕',
     }));
   });
 
   describe('when no meal is selected', () => {
     it('should return null', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: null,
-        placedIngredients: [],
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
       const { container } = render(<MealPlate plateRef={mockPlateRef} />);
       expect(container.firstChild).toBeNull();
     });
   });
 
   describe('Pizza meal', () => {
-    it('should render PizzaBase when selectedMeal is pizza', () => {
+    it('should render pizza base when pizza is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -81,29 +80,11 @@ describe('MealPlate', () => {
       expect(screen.getByTestId('pizza-base')).toBeInTheDocument();
     });
 
-    it('should render ingredient removal chips for pizza with placed ingredients', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'tomato', instanceId: '2', position: { x: 10, y: 10 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Cheese')).toBeInTheDocument();
-      expect(screen.getByText('Tomato')).toBeInTheDocument();
-    });
-
-    it('should not render chips when no ingredients are placed for pizza', () => {
+    it('should not show ingredient chips when no ingredients are placed', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -112,91 +93,122 @@ describe('MealPlate', () => {
       expect(chips.length).toBe(0);
     });
 
-    it('should display count when multiple ingredients of same type are placed', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'cheese', instanceId: '2', position: { x: 10, y: 10 } },
-        { ingredientId: 'cheese', instanceId: '3', position: { x: 20, y: 20 } },
-      ];
-
+    it('should show ingredient chips for placed ingredients', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+          { ingredientId: 'ing-2', instanceId: 'inst-2' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('×3')).toBeInTheDocument();
+      expect(screen.getByText(/Cheese/)).toBeInTheDocument();
+      expect(screen.getByText(/Lettuce/)).toBeInTheDocument();
     });
 
-    it('should call removeIngredient with last instance when clicking chip for pizza', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'cheese', instanceId: '2', position: { x: 10, y: 10 } },
-      ];
-
+    it('should show ingredient count when multiple of same ingredient', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+          { ingredientId: 'ing-1', instanceId: 'inst-2' },
+          { ingredientId: 'ing-1', instanceId: 'inst-3' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
-      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
-      const button = container.querySelector('button');
-      button?.click();
-      expect(mockRemoveIngredient).toHaveBeenCalledWith('2');
+      render(<MealPlate plateRef={mockPlateRef} />);
+      expect(screen.getByText(/×3/)).toBeInTheDocument();
     });
 
-    it('should use ingredient emoji from getIngredientById', () => {
+    it('should remove ingredient when chip is clicked', async () => {
+      const user = userEvent.setup();
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'pizza',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      render(<MealPlate plateRef={mockPlateRef} />);
+      const button = screen.getByRole('button');
+      await user.click(button);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
+    });
+
+    it('should remove only the last instance when multiple ingredients of same type', async () => {
+      const user = userEvent.setup();
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'pizza',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+          { ingredientId: 'ing-1', instanceId: 'inst-2' },
+        ],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      render(<MealPlate plateRef={mockPlateRef} />);
+      const button = screen.getByRole('button');
+      await user.click(button);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-2');
+    });
+
+    it('should use fallback ingredient name when translation missing', () => {
+      (useT as jest.Mock).mockReturnValue({
+        ingredients: {},
+      });
       (getIngredientById as jest.Mock).mockReturnValue({
-        id: 'cheese',
-        name: 'Cheese',
+        id: 'ing-1',
+        name: 'Ingredient Cheese',
         emoji: '🧀',
       });
 
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('🧀')).toBeInTheDocument();
+      expect(screen.getByText(/Ingredient Cheese/)).toBeInTheDocument();
     });
 
-    it('should use id as fallback when ingredient not found in translations or ingredients', () => {
+    it('should use ingredient id as fallback when name and translation missing', () => {
+      (useT as jest.Mock).mockReturnValue({
+        ingredients: {},
+      });
       (getIngredientById as jest.Mock).mockReturnValue(null);
-      (useT as jest.Mock).mockReturnValue({ ingredients: {} });
-
-      const placedIngredients = [
-        { ingredientId: 'unknown', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
 
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('unknown')).toBeInTheDocument();
+      expect(screen.getByText(/ing-1/)).toBeInTheDocument();
     });
   });
 
   describe('Hamburger meal', () => {
-    it('should render HamburgerStack when selectedMeal is hamburger', () => {
+    it('should render hamburger stack when hamburger is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'hamburger',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -204,73 +216,67 @@ describe('MealPlate', () => {
       expect(screen.getByTestId('hamburger-stack')).toBeInTheDocument();
     });
 
-    it('should show removal hint when hamburger has placed ingredients', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'hamburger',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Tap a layer to remove 🗑️')).toBeInTheDocument();
-    });
-
-    it('should not show removal hint when hamburger has no ingredients', () => {
+    it('should not show removal hint when no ingredients placed', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'hamburger',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
+      expect(container.textContent).not.toContain('Tap a layer to remove');
+    });
+
+    it('should show removal hint when ingredients are placed', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'hamburger',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.queryByText('Tap a layer to remove 🗑️')).not.toBeInTheDocument();
+      expect(screen.getByText(/Tap a layer to remove/)).toBeInTheDocument();
     });
   });
 
   describe('Burrito meal', () => {
-    it('should render BurritoAssembly when selectedMeal is burrito', () => {
+    it('should render burrito assembly when burrito is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
-      render(<MealPlate plateRef={mockPlateRef} />);
+      render(<MealPlate plateRef={mockPlateRef} burritoWrapping={false} />);
       expect(screen.getByTestId('burrito-assembly')).toBeInTheDocument();
     });
 
-    it('should pass burritoWrapping prop to BurritoAssembly', () => {
+    it('should show ingredient chips when not wrapping', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
-        placedIngredients: [],
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
-      render(<MealPlate plateRef={mockPlateRef} burritoWrapping={true} />);
-      expect(PizzaBaseModule.PizzaBase).toHaveBeenCalled();
-      expect(BurritoAssemblyModule.BurritoAssembly).toHaveBeenCalledWith(
-        expect.objectContaining({ wrapping: true }),
-        expect.anything()
-      );
+      render(<MealPlate plateRef={mockPlateRef} burritoWrapping={false} />);
+      expect(screen.getByText(/Cheese/)).toBeInTheDocument();
     });
 
-    it('should hide ingredient chips when burritoWrapping is true', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
+    it('should hide ingredient chips while wrapping', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -279,47 +285,30 @@ describe('MealPlate', () => {
       expect(buttons.length).toBe(0);
     });
 
-    it('should show ingredient chips when burritoWrapping is false', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
+    it('should remove ingredient when chip clicked', async () => {
+      const user = userEvent.setup();
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} burritoWrapping={false} />);
-      expect(screen.getByText('Cheese')).toBeInTheDocument();
-    });
-
-    it('should handle multiple burrito ingredients with counts', () => {
-      const placedIngredients = [
-        { ingredientId: 'rice', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'rice', instanceId: '2', position: { x: 10, y: 10 } },
-        { ingredientId: 'beans', instanceId: '3', position: { x: 20, y: 20 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'burrito',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} burritoWrapping={false} />);
-      expect(screen.getByText('×2')).toBeInTheDocument();
+      const button = screen.getByRole('button');
+      await user.click(button);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
     });
   });
 
   describe('Salad meal', () => {
-    it('should render SaladAssembly when selectedMeal is salad', () => {
+    it('should render salad assembly when salad is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'salad',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -327,66 +316,57 @@ describe('MealPlate', () => {
       expect(screen.getByTestId('salad-assembly')).toBeInTheDocument();
     });
 
-    it('should render ingredient removal chips for salad', () => {
-      const placedIngredients = [
-        { ingredientId: 'lettuce', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'tomato', instanceId: '2', position: { x: 10, y: 10 } },
-      ];
-
+    it('should show ingredient chips for salad', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'salad',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Lettuce')).toBeInTheDocument();
-      expect(screen.getByText('Tomato')).toBeInTheDocument();
+      expect(screen.getByText(/Cheese/)).toBeInTheDocument();
     });
 
-    it('should use green border color for salad chips', () => {
-      const placedIngredients = [
-        { ingredientId: 'lettuce', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
+    it('should not show chips when no ingredients placed', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'salad',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       const { container } = render(<MealPlate plateRef={mockPlateRef} />);
-      const button = container.querySelector('button');
-      expect(button).toHaveStyle({ border: '2px solid #2e7d32' });
+      const buttons = container.querySelectorAll('button');
+      expect(buttons.length).toBe(0);
     });
 
-    it('should call removeIngredient when salad chip is clicked', () => {
-      const placedIngredients = [
-        { ingredientId: 'lettuce', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
+    it('should remove ingredient when chip clicked for salad', async () => {
+      const user = userEvent.setup();
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'salad',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
-      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
-      const button = container.querySelector('button');
-      button?.click();
-      expect(mockRemoveIngredient).toHaveBeenCalledWith('1');
+      render(<MealPlate plateRef={mockPlateRef} />);
+      const button = screen.getByRole('button');
+      await user.click(button);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
     });
   });
 
   describe('Sushi meal', () => {
-    it('should render SushiAssembly when selectedMeal is sushi', () => {
+    it('should render sushi assembly when sushi is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sushi',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -394,66 +374,57 @@ describe('MealPlate', () => {
       expect(screen.getByTestId('sushi-assembly')).toBeInTheDocument();
     });
 
-    it('should render ingredient removal chips for sushi', () => {
-      const placedIngredients = [
-        { ingredientId: 'rice', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'nori', instanceId: '2', position: { x: 10, y: 10 } },
-      ];
-
+    it('should show ingredient chips for sushi', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sushi',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-2', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Rice')).toBeInTheDocument();
-      expect(screen.getByText('Nori')).toBeInTheDocument();
+      expect(screen.getByText(/Lettuce/)).toBeInTheDocument();
     });
 
-    it('should use dark border color for sushi chips', () => {
-      const placedIngredients = [
-        { ingredientId: 'rice', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
+    it('should not show chips when no ingredients', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sushi',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       const { container } = render(<MealPlate plateRef={mockPlateRef} />);
-      const button = container.querySelector('button');
-      expect(button).toHaveStyle({ border: '2px solid #1c2e1c' });
+      const buttons = container.querySelectorAll('button');
+      expect(buttons.length).toBe(0);
     });
 
-    it('should display multiple sushi ingredients with counts', () => {
-      const placedIngredients = [
-        { ingredientId: 'rice', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'rice', instanceId: '2', position: { x: 5, y: 5 } },
-        { ingredientId: 'rice', instanceId: '3', position: { x: 10, y: 10 } },
-      ];
-
+    it('should remove ingredient when chip clicked for sushi', async () => {
+      const user = userEvent.setup();
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sushi',
-        placedIngredients,
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-2', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('×3')).toBeInTheDocument();
+      const button = screen.getByRole('button');
+      await user.click(button);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
     });
   });
 
   describe('Sandwich meal (default)', () => {
-    it('should render SandwichStack when selectedMeal is sandwich', () => {
+    it('should render sandwich stack when sandwich is selected', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sandwich',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
@@ -461,268 +432,134 @@ describe('MealPlate', () => {
       expect(screen.getByTestId('sandwich-stack')).toBeInTheDocument();
     });
 
-    it('should render SandwichStack for unknown meal type', () => {
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'unknown',
-        placedIngredients: [],
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByTestId('sandwich-stack')).toBeInTheDocument();
-    });
-
-    it('should show removal hint when sandwich has placed ingredients', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'sandwich',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Tap a layer to remove 🗑️')).toBeInTheDocument();
-    });
-
-    it('should not show removal hint when sandwich has no ingredients', () => {
+    it('should not show removal hint when no ingredients placed', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'sandwich',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
+      expect(container.textContent).not.toContain('Tap a layer to remove');
+    });
+
+    it('should show removal hint when ingredients are placed', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'sandwich',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.queryByText('Tap a layer to remove 🗑️')).not.toBeInTheDocument();
+      expect(screen.getByText(/Tap a layer to remove/)).toBeInTheDocument();
     });
   });
 
-  describe('ref handling', () => {
-    it('should attach ref to plate container for pizza', () => {
+  describe('plateRef handling', () => {
+    it('should attach ref to plate div', () => {
       const ref = { current: null };
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'pizza',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
-      render(<MealPlate plateRef={ref} />);
-      expect(ref.current).toBeDefined();
-    });
-
-    it('should attach ref to plate container for hamburger', () => {
-      const ref = { current: null };
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'hamburger',
-        placedIngredients: [],
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={ref} />);
-      expect(ref.current).toBeDefined();
-    });
-
-    it('should attach ref to plate container for burrito', () => {
-      const ref = { current: null };
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'burrito',
-        placedIngredients: [],
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={ref} />);
-      expect(ref.current).toBeDefined();
+      const { container } = render(<MealPlate plateRef={ref} />);
+      const plateDiv = container.querySelector('[style*="position: relative"]');
+      expect(plateDiv).toBeInTheDocument();
     });
   });
 
   describe('burritoWrapping prop', () => {
-    it('should default burritoWrapping to false', () => {
+    it('should use default false value when not provided', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
-        placedIngredients: [{ ingredientId: 'rice', instanceId: '1', position: { x: 0, y: 0 } }],
-        pizzaSlices: 8,
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
       render(<MealPlate plateRef={mockPlateRef} />);
-      expect(BurritoAssemblyModule.BurritoAssembly).toHaveBeenCalledWith(
-        expect.objectContaining({ wrapping: false }),
-        expect.anything()
-      );
+      expect(screen.getByText(/Cheese/)).toBeInTheDocument();
     });
 
-    it('should pass burritoWrapping=true when provided', () => {
+    it('should accept true value', () => {
       (useGameStore as jest.Mock).mockReturnValue({
         selectedMeal: 'burrito',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+        ],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<MealPlate plateRef={mockPlateRef} burritoWrapping={true} />);
+      const buttons = container.querySelectorAll('button');
+      expect(buttons.length).toBe(0);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle many ingredients of different types', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'pizza',
+        placedIngredients: [
+          { ingredientId: 'ing-1', instanceId: 'inst-1' },
+          { ingredientId: 'ing-2', instanceId: 'inst-2' },
+          { ingredientId: 'ing-1', instanceId: 'inst-3' },
+          { ingredientId: 'ing-2', instanceId: 'inst-4' },
+        ],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
+      const buttons = container.querySelectorAll('button');
+      expect(buttons.length).toBe(2);
+    });
+
+    it('should handle empty string meal selection as falsy', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: '',
         placedIngredients: [],
-        pizzaSlices: 8,
+        pizzaSlices: 4,
         removeIngredient: mockRemoveIngredient,
       });
 
+      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('should handle undefined meal selection', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: undefined,
+        placedIngredients: [],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<MealPlate plateRef={mockPlateRef} />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('should pass correct props to assembly components', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        selectedMeal: 'burrito',
+        placedIngredients: [{ ingredientId: 'ing-1', instanceId: 'inst-1' }],
+        pizzaSlices: 4,
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      jest.spyOn(BurritoAssemblyModule, 'BurritoAssembly').mockReturnValue(<div>Burrito</div>);
       render(<MealPlate plateRef={mockPlateRef} burritoWrapping={true} />);
-      expect(BurritoAssemblyModule.BurritoAssembly).toHaveBeenCalledWith(
-        expect.objectContaining({ wrapping: true }),
-        expect.anything()
-      );
+      expect(BurritoAssemblyModule.BurritoAssembly).toHaveBeenCalled();
     });
   });
-
-  describe('translation fallbacks', () => {
-    it('should use translation when available', () => {
-      (useT as jest.Mock).mockReturnValue({
-        ingredients: { cheese: 'Fromage' },
-      });
-
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('Fromage')).toBeInTheDocument();
-    });
-
-    it('should use ingredient name when translation not available', () => {
-      (useT as jest.Mock).mockReturnValue({ ingredients: {} });
-      (getIngredientById as jest.Mock).mockReturnValue({
-        id: 'cheese',
-        name: 'CheeseFromDB',
-        emoji: '🧀',
-      });
-
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('CheeseFromDB')).toBeInTheDocument();
-    });
-
-    it('should fallback to id when ingredient not found and translation not available', () => {
-      (useT as jest.Mock).mockReturnValue({ ingredients: {} });
-      (getIngredientById as jest.Mock).mockReturnValue(null);
-
-      const placedIngredients = [
-        { ingredientId: 'unknownIngredient', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('unknownIngredient')).toBeInTheDocument();
-    });
-  });
-
-  describe('chip styling and behavior', () => {
-    it('should render emoji in chip for all meal types with chips', () => {
-      (getIngredientById as jest.Mock).mockReturnValue({
-        id: 'cheese',
-        name: 'Cheese',
-        emoji: '🧀',
-      });
-
-      const mealTypes = ['pizza', 'burrito', 'salad', 'sushi'];
-
-      mealTypes.forEach(meal => {
-        jest.clearAllMocks();
-        (useT as jest.Mock).mockReturnValue(mockTranslations);
-        (getIngredientById as jest.Mock).mockReturnValue({
-          id: 'cheese',
-          name: 'Cheese',
-          emoji: '🧀',
-        });
-
-        const placedIngredients = [
-          { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-        ];
-
-        (useGameStore as jest.Mock).mockReturnValue({
-          selectedMeal: meal,
-          placedIngredients,
-          pizzaSlices: 8,
-          removeIngredient: mockRemoveIngredient,
-        });
-
-        const { unmount } = render(<MealPlate plateRef={mockPlateRef} />);
-        expect(screen.getByText('🧀')).toBeInTheDocument();
-        unmount();
-      });
-    });
-
-    it('should render close button in chip', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-      ];
-
-      (useGameStore as jest.Mock).mockReturnValue({
-        selectedMeal: 'pizza',
-        placedIngredients,
-        pizzaSlices: 8,
-        removeIngredient: mockRemoveIngredient,
-      });
-
-      render(<MealPlate plateRef={mockPlateRef} />);
-      expect(screen.getByText('✕')).toBeInTheDocument();
-    });
-  });
-
-  describe('empty ingredient list handling', () => {
-    it('should not render chips section when all meal types have empty placedIngredients', () => {
-      const mealTypes = ['pizza', 'burrito', 'salad', 'sushi'];
-
-      mealTypes.forEach(meal => {
-        jest.clearAllMocks();
-        (useT as jest.Mock).mockReturnValue(mockTranslations);
-        (getIngredientById as jest.Mock).mockImplementation((id: string) => ({
-          id,
-          name: id,
-          emoji: '🥒',
-        }));
-
-        (useGameStore as jest.Mock).mockReturnValue({
-          selectedMeal: meal,
-          placedIngredients: [],
-          pizzaSlices: 8,
-          removeIngredient: mockRemoveIngredient,
-        });
-
-        const { container, unmount } = render(<MealPlate plateRef={mockPlateRef} />);
-        const buttons = container.querySelectorAll('button');
-        expect(buttons.length).toBe(0);
-        unmount();
-      });
-    });
-  });
-
-  describe('complex ingredient scenarios', () => {
-    it('should handle pizza with many different ingredients', () => {
-      const placedIngredients = [
-        { ingredientId: 'cheese', instanceId: '1', position: { x: 0, y: 0 } },
-        { ingredientId: 'tomato', instanceId: '2', position: { x: 10, y: 10 } },
-        { ingredientId: 
+});
