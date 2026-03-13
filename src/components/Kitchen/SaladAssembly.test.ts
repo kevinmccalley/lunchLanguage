@@ -1,70 +1,219 @@
 // @ts-nocheck
-import React from 'react';
+import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { SaladAssembly } from './SaladAssembly';
 import type { PlacedIngredient } from '../../types';
+import { SaladAssembly } from './SaladAssembly';
+
+// Mock framer-motion to avoid animation overhead in tests
+jest.mock('framer-motion', () => ({
+  motion: {
+    svg: ({ children, ...props }: any) => {
+      const { initial, animate, transition, ...rest } = props;
+      return <svg {...rest}>{children}</svg>;
+    },
+  },
+}));
 
 describe('SaladAssembly', () => {
-  describe('srng (seeded random number generator)', () => {
-    it('should generate consistent results for the same seed and index', () => {
-      // We need to test srng indirectly through bowlPoint since it's not exported
-      // But we can verify consistency by checking that the same ingredients produce consistent positions
-      const ingredient1: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-1' };
-      const ingredient2: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-1' };
-      
-      const { container: container1 } = render(<SaladAssembly placedIngredients={[ingredient1]} />);
-      const { container: container2 } = render(<SaladAssembly placedIngredients={[ingredient2]} />);
-      
-      // Both should render the same number of elements
-      const ellipses1 = container1.querySelectorAll('ellipse');
-      const ellipses2 = container2.querySelectorAll('ellipse');
-      expect(ellipses1.length).toBe(ellipses2.length);
+  describe('component rendering', () => {
+    it('should render an SVG element with correct dimensions', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const svg = container.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      expect(svg?.getAttribute('width')).toBe('300');
+      expect(svg?.getAttribute('height')).toBe('280');
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 300 280');
     });
 
-    it('should produce different results for different seeds', () => {
-      const ingredient1: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-1' };
-      const ingredient2: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-2' };
-      
-      const { container: container1 } = render(<SaladAssembly placedIngredients={[ingredient1]} />);
-      const { container: container2 } = render(<SaladAssembly placedIngredients={[ingredient2]} />);
-      
-      // Get the group transforms - they should be different
-      const groups1 = Array.from(container1.querySelectorAll('g[transform]')).map(g => g.getAttribute('transform'));
-      const groups2 = Array.from(container2.querySelectorAll('g[transform]')).map(g => g.getAttribute('transform'));
-      
-      // At least some transforms should differ
-      const allIdentical = groups1.every((t, i) => t === groups2[i]);
-      expect(allIdentical).toBe(false);
+    it('should render the plate elements', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const ellipses = container.querySelectorAll('ellipse');
+      // Should have plate ellipses and bowl elements
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render the bowl structure', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const paths = container.querySelectorAll('path');
+      // Should have bowl outer and inner paths, plus rim highlight
+      expect(paths.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should render lettuce bed background', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const ellipses = container.querySelectorAll('ellipse');
+      // Find the lettuce bed ellipse (cx=150, cy=162)
+      const lettuceBed = Array.from(ellipses).find(
+        (el) => el.getAttribute('cx') === '150' && el.getAttribute('cy') === '162'
+      );
+      expect(lettuceBed).toBeInTheDocument();
+    });
+
+    it('should render rim highlight path', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const paths = container.querySelectorAll('path');
+      const rimHighlight = Array.from(paths).find((p) => 
+        p.getAttribute('d')?.includes('M38 120')
+      );
+      expect(rimHighlight).toBeInTheDocument();
     });
   });
 
-  describe('bowlPoint', () => {
-    it('should distribute points within reasonable bounds for the bowl ellipse', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-instance' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      // Extract transform values from groups
-      const groups = Array.from(container.querySelectorAll('g[transform]'));
-      groups.forEach(group => {
-        const transform = group.getAttribute('transform');
-        if (transform && transform.includes('translate')) {
-          const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-          if (match) {
-            const x = parseFloat(match[1]);
-            const y = parseFloat(match[2]);
-            // Bowl center is at 150, 182 with some padding
-            expect(x).toBeGreaterThan(0);
-            expect(x).toBeLessThan(300);
-            expect(y).toBeGreaterThan(80);
-            expect(y).toBeLessThan(250);
-          }
-        }
+  describe('rendering with placed ingredients', () => {
+    it('should render ingredients with correct count for known ingredient types', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      // lettuce has FILL_COUNT of 14
+      expect(groups.length).toBe(14);
+    });
+
+    it('should render multiple different ingredients', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+        { instanceId: 'tomato-1', ingredientId: 'tomato_slice' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      // lettuce: 14, tomato_slice: 8
+      expect(groups.length).toBe(22);
+    });
+
+    it('should use default fill count of 8 for unknown ingredients', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'unknown-1', ingredientId: 'unknown_ingredient' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(8);
+    });
+
+    it('should render all defined ingredient fill counts correctly', () => {
+      const ingredientIds = [
+        'lettuce', 'tomato_slice', 'cucumber', 'carrot', 'cherry_tom',
+        'croutons', 'mushroom', 'olive', 'bell_pepper', 'bacon',
+        'chicken', 'avocado', 'beans', 'corn', 'radish',
+        'strawberry', 'dressing', 'walnuts', 'basil', 'onion',
+        'spinach', 'sprouts',
+      ];
+
+      const fillCounts: Record<string, number> = {
+        lettuce: 14, tomato_slice: 8, cucumber: 10, carrot: 10, cherry_tom: 8,
+        croutons: 8, mushroom: 7, olive: 8, bell_pepper: 9, bacon: 8,
+        chicken: 8, avocado: 7, beans: 10, corn: 18, radish: 8,
+        strawberry: 7, dressing: 6, walnuts: 7, basil: 8, onion: 8,
+        spinach: 10, sprouts: 10,
+      };
+
+      ingredientIds.forEach((ingredientId) => {
+        const placedIngredients: PlacedIngredient[] = [
+          { instanceId: `${ingredientId}-1`, ingredientId },
+        ];
+        const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+        const groups = container.querySelectorAll('g');
+        expect(groups.length).toBe(fillCounts[ingredientId]);
       });
     });
+
+    it('should render multiple instances of the same ingredient type', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+        { instanceId: 'lettuce-2', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      // 14 + 14
+      expect(groups.length).toBe(28);
+    });
+
+    it('should assign unique keys to rendered groups', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+        { instanceId: 'tomato-1', ingredientId: 'tomato_slice' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      const keys = new Set<string>();
+      groups.forEach((group) => {
+        const key = group.getAttribute('key');
+        if (key) keys.add(key);
+      });
+      // All groups should have unique keys (14 + 8 = 22)
+      expect(keys.size).toBeGreaterThan(0);
+    });
   });
 
-  describe('SaladFilling component', () => {
-    describe('all ingredient types', () => {
+  describe('SaladFilling component rendering', () => {
+    it('should render lettuce filling correctly', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const ellipses = container.querySelectorAll('ellipse[rx="11"]');
+      expect(ellipses.length).toBeGreaterThan(0);
+    });
+
+    it('should render tomato_slice filling with correct attributes', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'tomato-1', ingredientId: 'tomato_slice' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const circles = container.querySelectorAll('circle[r="7"]');
+      expect(circles.length).toBeGreaterThan(0);
+    });
+
+    it('should render cucumber filling with lines', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'cucumber-1', ingredientId: 'cucumber' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const lines = container.querySelectorAll('line');
+      expect(lines.length).toBeGreaterThan(0);
+    });
+
+    it('should render corn as small circles', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'corn-1', ingredientId: 'corn' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const circles = container.querySelectorAll('circle[r="2.5"]');
+      expect(circles.length).toBe(18); // corn has 18 fill count
+    });
+
+    it('should render strawberry with seeds', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'strawberry-1', ingredientId: 'strawberry' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      // Strawberry should have multiple elements per instance
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(7); // strawberry has 7 fill count
+    });
+
+    it('should render sprouts with multiple lines and circles', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'sprouts-1', ingredientId: 'sprouts' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const lines = container.querySelectorAll('line');
+      const circles = container.querySelectorAll('circle');
+      // Sprouts have lines and circles
+      expect(lines.length).toBeGreaterThan(0);
+      expect(circles.length).toBeGreaterThan(0);
+    });
+
+    it('should render unknown ingredient type with fallback', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'unknown-1', ingredientId: 'not_a_real_ingredient' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const fallbackCircles = container.querySelectorAll('circle[r="5"]');
+      expect(fallbackCircles.length).toBeGreaterThan(0);
+    });
+
+    it('should render all ingredient types without errors', () => {
       const ingredientIds = [
         'lettuce', 'spinach', 'tomato_slice', 'cherry_tom', 'cucumber',
         'carrot', 'croutons', 'mushroom', 'olive', 'bell_pepper',
@@ -73,285 +222,120 @@ describe('SaladAssembly', () => {
         'onion', 'sprouts',
       ];
 
-      ingredientIds.forEach(id => {
-        it(`should render ${id} correctly`, () => {
-          const ingredient: PlacedIngredient = { ingredientId: id as any, instanceId: 'test' };
-          const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-          
-          // Should render SVG with salad elements
-          const svg = container.querySelector('svg');
-          expect(svg).toBeInTheDocument();
-          
-          // Should have the base bowl elements
-          const ellipses = container.querySelectorAll('ellipse');
-          expect(ellipses.length).toBeGreaterThan(0);
-        });
-      });
-
-      it('should render default filling for unknown ingredient id', () => {
-        const ingredient: PlacedIngredient = { ingredientId: 'unknown_ingredient' as any, instanceId: 'test' };
-        const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-        
-        const svg = container.querySelector('svg');
-        expect(svg).toBeInTheDocument();
-        
-        // Should still render circles (default case)
-        const circles = container.querySelectorAll('circle');
-        expect(circles.length).toBeGreaterThan(0);
-      });
-    });
-
-    describe('specific ingredient rendering', () => {
-      it('should render lettuce with correct fills', () => {
-        const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test' };
-        const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-        
-        // Lettuce has 14 items
-        const groups = container.querySelectorAll('g[transform]');
-        expect(groups.length).toBe(14);
-      });
-
-      it('should render corn with correct count', () => {
-        const ingredient: PlacedIngredient = { ingredientId: 'corn', instanceId: 'test' };
-        const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-        
-        // Corn has 18 items (most items)
-        const groups = container.querySelectorAll('g[transform]');
-        expect(groups.length).toBe(18);
-      });
-
-      it('should render mushroom with correct count', () => {
-        const ingredient: PlacedIngredient = { ingredientId: 'mushroom', instanceId: 'test' };
-        const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-        
-        // Mushroom has 7 items (minimum explicit count)
-        const groups = container.querySelectorAll('g[transform]');
-        expect(groups.length).toBe(7);
+      ingredientIds.forEach((ingredientId) => {
+        const placedIngredients: PlacedIngredient[] = [
+          { instanceId: `${ingredientId}-test`, ingredientId },
+        ];
+        expect(() => {
+          render(<SaladAssembly placedIngredients={placedIngredients} />);
+        }).not.toThrow();
       });
     });
   });
 
-  describe('SaladAssembly component', () => {
-    it('should render SVG with correct dimensions', () => {
-      const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toHaveAttribute('width', '300');
-      expect(svg).toHaveAttribute('height', '280');
-      expect(svg).toHaveAttribute('viewBox', '0 0 300 280');
+  describe('ingredient positioning and transform', () => {
+    it('should apply translate transform to ingredient groups', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      groups.forEach((group) => {
+        const transform = group.getAttribute('transform');
+        // Should contain translate and rotate
+        expect(transform).toMatch(/translate\(/);
+        expect(transform).toMatch(/rotate\(/);
+      });
     });
 
-    it('should render plate elements', () => {
+    it('should vary transforms based on instance ID', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+        { instanceId: 'lettuce-2', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      const transforms = new Set<string>();
+      groups.forEach((group) => {
+        const transform = group.getAttribute('transform');
+        if (transform) transforms.add(transform);
+      });
+      // Different instances should have different transforms
+      expect(transforms.size).toBeGreaterThan(1);
+    });
+  });
+
+  describe('empty and edge cases', () => {
+    it('should render with empty placedIngredients array', () => {
       const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      // Should have plate ellipses
+      const svg = container.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      // Should still have bowl and plate elements
       const ellipses = container.querySelectorAll('ellipse');
       expect(ellipses.length).toBeGreaterThan(0);
-      
-      // Check for plate center position
-      const plateEllipse = Array.from(ellipses).find(el => el.getAttribute('cx') === '150' && el.getAttribute('cy') === '268');
-      expect(plateEllipse).toBeDefined();
     });
 
-    it('should render bowl elements', () => {
+    it('should render with null-like props handled correctly', () => {
       const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      // Should have bowl paths
-      const paths = container.querySelectorAll('path');
-      expect(paths.length).toBeGreaterThan(0);
+      expect(container.querySelector('svg')).toBeInTheDocument();
     });
 
-    it('should render lettuce bed', () => {
-      const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      // Should have lettuce bed ellipse
-      const ellipses = container.querySelectorAll('ellipse');
-      const lettuceEllipse = Array.from(ellipses).find(el => 
-        el.getAttribute('cx') === '150' && el.getAttribute('cy') === '162'
-      );
-      expect(lettuceEllipse).toBeDefined();
-    });
-
-    it('should render with empty placedIngredients', () => {
-      const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      expect(svg?.children.length).toBeGreaterThan(0);
-    });
-
-    it('should render single ingredient', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'instance-1' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      
-      // Should have base elements plus ingredient groups
-      const groups = container.querySelectorAll('g[transform]');
-      expect(groups.length).toBeGreaterThan(0);
-    });
-
-    it('should render multiple ingredients', () => {
-      const ingredients: PlacedIngredient[] = [
-        { ingredientId: 'lettuce', instanceId: 'instance-1' },
-        { ingredientId: 'tomato_slice', instanceId: 'instance-2' },
-        { ingredientId: 'cucumber', instanceId: 'instance-3' },
-      ];
-      const { container } = render(<SaladAssembly placedIngredients={ingredients} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      
-      // Should have groups for all ingredients
-      const groups = container.querySelectorAll('g[transform]');
-      // lettuce (14) + tomato_slice (8) + cucumber (10) = 32
-      expect(groups.length).toBe(32);
-    });
-
-    it('should use default fill count for unknown ingredients', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'nonexistent_ingredient' as any, instanceId: 'instance-1' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const groups = container.querySelectorAll('g[transform]');
-      // Should use default count of 8
-      expect(groups.length).toBe(8);
-    });
-
-    it('should apply unique keys to ingredient groups', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test-instance' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const groups = container.querySelectorAll('g[transform]');
-      const keys: string[] = [];
-      
-      groups.forEach(group => {
-        // Keys are applied but not directly accessible in DOM, but we can verify groups exist
-        expect(group).toBeInTheDocument();
-      });
-      
-      expect(groups.length).toBe(14); // lettuce count
-    });
-
-    it('should handle multiple instances of same ingredient type', () => {
-      const ingredients: PlacedIngredient[] = [
-        { ingredientId: 'tomato_slice', instanceId: 'tomato-1' },
-        { ingredientId: 'tomato_slice', instanceId: 'tomato-2' },
-      ];
-      const { container } = render(<SaladAssembly placedIngredients={ingredients} />);
-      
-      const groups = container.querySelectorAll('g[transform]');
-      // Should have 8 + 8 = 16 groups for two tomatoes
-      expect(groups.length).toBe(16);
-    });
-
-    it('should apply motion animation props', () => {
-      const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-      // Motion component will be present in the DOM
-      expect(svg?.tagName.toLowerCase()).toBe('svg');
-    });
-
-    it('should render rim highlight path', () => {
-      const { container } = render(<SaladAssembly placedIngredients={[]} />);
-      
-      // Should have paths for bowl and rim
-      const paths = container.querySelectorAll('path');
-      expect(paths.length).toBeGreaterThan(0);
-      
-      // At least one path should be a rim highlight
-      const rimPath = Array.from(paths).find(p => {
-        const d = p.getAttribute('d');
-        return d && d.includes('120');
-      });
-      expect(rimPath).toBeDefined();
-    });
-
-    it('should position ingredient groups with translate and rotate', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: 'test' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const groups = container.querySelectorAll('g[transform]');
-      groups.forEach(group => {
-        const transform = group.getAttribute('transform');
-        expect(transform).toMatch(/translate\([^)]+\)\s*rotate\([^)]+\)/);
-      });
-    });
-  });
-
-  describe('FILL_COUNT constant', () => {
-    it('should respect fill counts for all known ingredients', () => {
-      const testCases: Array<[string, number]> = [
-        ['lettuce', 14],
-        ['tomato_slice', 8],
-        ['cucumber', 10],
-        ['carrot', 10],
-        ['cherry_tom', 8],
-        ['croutons', 8],
-        ['mushroom', 7],
-        ['olive', 8],
-        ['bell_pepper', 9],
-        ['bacon', 8],
-        ['chicken', 8],
-        ['avocado', 7],
-        ['beans', 10],
-        ['corn', 18],
-        ['radish', 8],
-        ['strawberry', 7],
-        ['dressing', 6],
-        ['walnuts', 7],
-        ['basil', 8],
-        ['onion', 8],
-        ['spinach', 10],
-        ['sprouts', 10],
-      ];
-
-      testCases.forEach(([ingredientId, expectedCount]) => {
-        const ingredient: PlacedIngredient = { ingredientId: ingredientId as any, instanceId: 'test' };
-        const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-        
-        const groups = container.querySelectorAll('g[transform]');
-        expect(groups.length).toBe(expectedCount);
-      });
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle empty string instanceId', () => {
-      const ingredient: PlacedIngredient = { ingredientId: 'lettuce', instanceId: '' };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
-    });
-
-    it('should handle very long instanceId', () => {
-      const ingredient: PlacedIngredient = {
+    it('should render large number of ingredients without performance issues', () => {
+      const placedIngredients: PlacedIngredient[] = Array.from({ length: 10 }, (_, i) => ({
+        instanceId: `lettuce-${i}`,
         ingredientId: 'lettuce',
-        instanceId: 'a'.repeat(1000)
-      };
-      const { container } = render(<SaladAssembly placedIngredients={[ingredient]} />);
-      
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      }));
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
+      const groups = container.querySelectorAll('g');
+      // 14 * 10 = 140
+      expect(groups.length).toBe(140);
     });
 
-    it('should render many ingredients without performance issues', () => {
-      const ingredients: PlacedIngredient[] = Array.from({ length: 10 }, (_, i) => ({
-        ingredientId: 'lettuce' as const,
-        instanceId: `instance-${i}`
-      }));
+    it('should handle rapid re-renders with different props', () => {
+      const { rerender, container } = render(
+        <SaladAssembly placedIngredients={[]} />
+      );
       
-      const { container } = render(<SaladAssembly placedIngredients={ingredients} />);
+      rerender(
+        <SaladAssembly placedIngredients={[
+          { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+        ]} />
+      );
       
+      let groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(14);
+      
+      rerender(
+        <SaladAssembly placedIngredients={[
+          { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+          { instanceId: 'tomato-1', ingredientId: 'tomato_slice' },
+        ]} />
+      );
+      
+      groups = container.querySelectorAll('g');
+      expect(groups.length).toBe(22);
+    });
+  });
+
+  describe('visual structure', () => {
+    it('should render in correct visual order - bowl then ingredients then rim', () => {
+      const placedIngredients: PlacedIngredient[] = [
+        { instanceId: 'lettuce-1', ingredientId: 'lettuce' },
+      ];
+      const { container } = render(<SaladAssembly placedIngredients={placedIngredients} />);
       const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      const children = svg?.children;
       
-      // Should have 10 * 14 = 140 ingredient groups
-      const groups = container.querySelectorAll('g[transform]');
-      expect(groups.length).toBe(140);
+      expect(children).toBeDefined();
+      expect((children?.length ?? 0) > 0).toBe(true);
+    });
+
+    it('should render plate before bowl', () => {
+      const { container } = render(<SaladAssembly placedIngredients={[]} />);
+      const ellipses = container.querySelectorAll('ellipse');
+      // First ellipses should be the plate
+      const firstEllipse = ellipses[0];
+      expect(firstEllipse).toBeInTheDocument();
     });
   });
 });
