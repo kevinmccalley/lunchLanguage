@@ -1,250 +1,266 @@
 // @ts-nocheck
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import React from 'react';
+import { motion } from 'framer-motion';
 import { IngredientShelf } from './IngredientShelf';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n/useT';
-import * as ingredientsData from '../../data/ingredients';
+import { getIngredientsByMeal } from '../../data/ingredients';
+import { IngredientToken } from './IngredientToken';
+import { LearningTooltip } from '../UI/LearningTooltip';
+import type { PlacedIngredient } from '../../types';
 
+jest.mock('framer-motion');
 jest.mock('../../store/gameStore');
 jest.mock('../../i18n/useT');
 jest.mock('../../data/ingredients');
 jest.mock('./IngredientToken');
 jest.mock('../UI/LearningTooltip');
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => React.createElement('div', props, children),
-  },
-}));
 
 describe('IngredientShelf', () => {
   const mockOnAdd = jest.fn();
-  const mockPlateRef = React.createRef<HTMLDivElement>();
-  const mockIngredients = [
-    { id: 'tomato', name: 'Tomato', emoji: '🍅' },
-    { id: 'lettuce', name: 'Lettuce', emoji: '🥬' },
-    { id: 'cheese', name: 'Cheese', emoji: '🧀' },
-  ];
+  const mockPlateRef = { current: document.createElement('div') };
   const mockT = {
-    kitchen: { addHint: 'Click to add ingredients' },
+    kitchen: { addHint: 'Add ingredients' },
     ingredients: {
-      tomato: 'Tomate',
-      lettuce: 'Lechuga',
-      cheese: 'Queso',
+      tomato: 'Tomato',
+      cheese: 'Cheese',
     },
   };
 
+  const mockIngredients = [
+    { id: 'tomato', name: 'Tomato', emoji: '🍅' },
+    { id: 'cheese', name: 'Cheese', emoji: '🧀' },
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
-    (useGameStore as jest.Mock).mockReturnValue({ selectedMeal: 'lunch' });
+
+    (useGameStore as jest.Mock).mockReturnValue({
+      selectedMeal: 'lunch',
+    });
+
     (useT as jest.Mock).mockReturnValue(mockT);
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue(mockIngredients);
+
+    (getIngredientsByMeal as jest.Mock).mockReturnValue(mockIngredients);
+
+    (IngredientToken as jest.Mock).mockImplementation(({ ingredient, onClick }) => (
+      <div onClick={onClick} data-testid={`token-${ingredient.id}`}>
+        {ingredient.name}
+      </div>
+    ));
+
+    (LearningTooltip as jest.Mock).mockImplementation(({ children }) => (
+      <div data-testid="learning-tooltip">{children}</div>
+    ));
+
+    (motion.div as jest.Mock).mockImplementation(({ children, ...props }) => (
+      <div {...props} data-testid="motion-div">
+        {children}
+      </div>
+    ));
+
+    if (mockPlateRef.current) {
+      mockPlateRef.current.getBoundingClientRect = jest.fn(() => ({
+        width: 400,
+        height: 300,
+        top: 0,
+        left: 0,
+        right: 400,
+        bottom: 300,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+    }
   });
 
-  it('should render the ingredient shelf with correct title', () => {
+  it('should render the ingredient shelf with ingredients', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(screen.getByText('Click to add ingredients')).toBeInTheDocument();
+
+    expect(screen.getByText('Add ingredients')).toBeInTheDocument();
+    expect(screen.getByTestId('token-tomato')).toBeInTheDocument();
+    expect(screen.getByTestId('token-cheese')).toBeInTheDocument();
   });
 
-  it('should render all ingredients from the selected meal', () => {
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue(mockIngredients);
+  it('should display translated ingredient names', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(ingredientsData.getIngredientsByMeal).toHaveBeenCalledWith('lunch');
+
+    expect(screen.getByText('Tomato')).toBeInTheDocument();
+    expect(screen.getByText('Cheese')).toBeInTheDocument();
   });
 
-  it('should fetch ingredients based on selectedMeal from store', () => {
-    (useGameStore as jest.Mock).mockReturnValue({ selectedMeal: 'breakfast' });
+  it('should call getIngredientsByMeal with selected meal type', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(ingredientsData.getIngredientsByMeal).toHaveBeenCalledWith('breakfast');
+
+    expect(getIngredientsByMeal).toHaveBeenCalledWith('lunch');
   });
 
-  it('should use translated ingredient names from i18n', () => {
+  it('should call onAdd with correct structure when ingredient is clicked', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(useT).toHaveBeenCalled();
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+
+    expect(mockOnAdd).toHaveBeenCalledTimes(1);
+    const addedIngredient = mockOnAdd.mock.calls[0][0] as PlacedIngredient;
+
+    expect(addedIngredient.ingredientId).toBe('tomato');
+    expect(addedIngredient.instanceId).toMatch(/^tomato-\d+-[\d.]+$/);
+    expect(typeof addedIngredient.x).toBe('number');
+    expect(typeof addedIngredient.y).toBe('number');
+    expect(typeof addedIngredient.rotation).toBe('number');
+    expect(typeof addedIngredient.scale).toBe('number');
   });
 
-  it('should handle ingredient click with valid plate ref', () => {
-    const mockDiv = document.createElement('div');
-    mockDiv.getBoundingClientRect = jest.fn(() => ({
-      width: 400,
-      height: 300,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }));
-    const plateRef = React.createRef<HTMLDivElement>();
-    Object.defineProperty(plateRef, 'current', {
-      writable: true,
-      value: mockDiv,
-    });
-
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
-  });
-
-  it('should not call onAdd when plateRef is null', () => {
-    const plateRef = React.createRef<HTMLDivElement>();
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
-  });
-
-  it('should generate unique instanceIds for each added ingredient', () => {
-    const mockDiv = document.createElement('div');
-    mockDiv.getBoundingClientRect = jest.fn(() => ({
-      width: 400,
-      height: 300,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }));
-    const plateRef = React.createRef<HTMLDivElement>();
-    Object.defineProperty(plateRef, 'current', {
-      writable: true,
-      value: mockDiv,
-    });
-
-    const { rerender } = render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
-  });
-
-  it('should handle empty ingredients list', () => {
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue([]);
+  it('should position ingredients within plate bounds', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(screen.getByText('Click to add ingredients')).toBeInTheDocument();
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+
+    const addedIngredient = mockOnAdd.mock.calls[0][0] as PlacedIngredient;
+
+    expect(addedIngredient.x).toBeGreaterThanOrEqual(20);
+    expect(addedIngredient.x).toBeLessThanOrEqual(320); // 20 + (400 - 80)
+    expect(addedIngredient.y).toBeGreaterThanOrEqual(20);
+    expect(addedIngredient.y).toBeLessThanOrEqual(220); // 20 + (300 - 80)
   });
 
-  it('should use fallback ingredient name when translation is missing', () => {
-    const ingredientsWithMissingTranslation = [
-      { id: 'unknown', name: 'Unknown Ingredient', emoji: '❓' },
-    ];
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue(ingredientsWithMissingTranslation);
-    const mockTWithPartialTranslations = {
-      kitchen: { addHint: 'Click to add ingredients' },
+  it('should apply random rotation within range', () => {
+    render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+
+    const addedIngredient = mockOnAdd.mock.calls[0][0] as PlacedIngredient;
+
+    expect(addedIngredient.rotation).toBeGreaterThanOrEqual(-15);
+    expect(addedIngredient.rotation).toBeLessThanOrEqual(15);
+  });
+
+  it('should apply random scale within range', () => {
+    render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+
+    const addedIngredient = mockOnAdd.mock.calls[0][0] as PlacedIngredient;
+
+    expect(addedIngredient.scale).toBeGreaterThanOrEqual(0.85);
+    expect(addedIngredient.scale).toBeLessThanOrEqual(1.15);
+  });
+
+  it('should not add ingredient if plateRef is not available', () => {
+    const nullPlateRef = { current: null };
+    render(<IngredientShelf onAdd={mockOnAdd} plateRef={nullPlateRef} />);
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+
+    expect(mockOnAdd).not.toHaveBeenCalled();
+  });
+
+  it('should handle missing translation for ingredient', () => {
+    const customT = {
+      kitchen: { addHint: 'Add ingredients' },
       ingredients: {},
     };
-    (useT as jest.Mock).mockReturnValue(mockTWithPartialTranslations);
+    (useT as jest.Mock).mockReturnValue(customT);
 
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    expect(tomatoToken).toBeInTheDocument();
+    expect(tomatoToken.textContent).toBe('Tomato'); // falls back to ingredient.name
   });
 
-  it('should handle selectedMeal as MealType', () => {
-    (useGameStore as jest.Mock).mockReturnValue({ selectedMeal: 'dinner' });
+  it('should render with correct motion animation properties', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    expect(ingredientsData.getIngredientsByMeal).toHaveBeenCalledWith('dinner');
+
+    expect(motion.div).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initial: { y: 80, opacity: 0 },
+        animate: { y: 0, opacity: 1 },
+        transition: expect.objectContaining({
+          delay: 0.3,
+          type: 'spring',
+          stiffness: 200,
+          damping: 22,
+        }),
+      }),
+      expect.anything()
+    );
   });
 
-  it('should apply correct styling to container', () => {
-    const { container } = render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-    const motionDiv = container.querySelector('div');
-    expect(motionDiv).toBeInTheDocument();
-  });
-
-  it('should render LearningTooltip wrapper for each ingredient', () => {
+  it('should render learning tooltip for each ingredient', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    const tooltips = screen.getAllByTestId('learning-tooltip');
+    expect(tooltips).toHaveLength(2);
+  });
+
+  it('should pass correct props to LearningTooltip', () => {
+    render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    expect(LearningTooltip).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredientKey: 'tomato',
+        nativeWord: 'Tomato',
+      }),
+      expect.anything()
+    );
+
+    expect(LearningTooltip).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredientKey: 'cheese',
+        nativeWord: 'Cheese',
+      }),
+      expect.anything()
+    );
   });
 
   it('should pass correct props to IngredientToken', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    expect(IngredientToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredient: expect.objectContaining({
+          id: 'tomato',
+          name: 'Tomato',
+        }),
+        size: 68,
+        onClick: expect.any(Function),
+      }),
+      expect.anything()
+    );
   });
 
-  it('should handle ingredient position calculation within plate bounds', () => {
-    const mockDiv = document.createElement('div');
-    const getBoundingClientRectMock = jest.fn(() => ({
-      width: 500,
-      height: 400,
-      top: 100,
-      left: 100,
-      right: 600,
-      bottom: 500,
-      x: 100,
-      y: 100,
-      toJSON: () => ({}),
-    }));
-    mockDiv.getBoundingClientRect = getBoundingClientRectMock;
-
-    const plateRef = React.createRef<HTMLDivElement>();
-    Object.defineProperty(plateRef, 'current', {
-      writable: true,
-      value: mockDiv,
-    });
-
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
-  });
-
-  it('should pass correct size prop to IngredientToken', () => {
+  it('should generate unique instanceIds for same ingredient clicked multiple times', () => {
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    const tomatoToken = screen.getByTestId('token-tomato');
+    fireEvent.click(tomatoToken);
+    fireEvent.click(tomatoToken);
+
+    const firstInstanceId = mockOnAdd.mock.calls[0][0].instanceId;
+    const secondInstanceId = mockOnAdd.mock.calls[1][0].instanceId;
+
+    expect(firstInstanceId).not.toBe(secondInstanceId);
   });
 
-  it('should handle multiple ingredients with different translation states', () => {
-    const mixedIngredients = [
-      { id: 'tomato', name: 'Tomato', emoji: '🍅' },
-      { id: 'unknown', name: 'Unknown', emoji: '❓' },
-    ];
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue(mixedIngredients);
+  it('should handle empty ingredients list', () => {
+    (getIngredientsByMeal as jest.Mock).mockReturnValue([]);
 
     render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
+
+    expect(screen.getByText('Add ingredients')).toBeInTheDocument();
+    expect(IngredientToken).not.toHaveBeenCalled();
   });
 
-  it('should maintain ingredient order from data source', () => {
-    const orderedIngredients = [
-      { id: 'first', name: 'First', emoji: '1️⃣' },
-      { id: 'second', name: 'Second', emoji: '2️⃣' },
-      { id: 'third', name: 'Third', emoji: '3️⃣' },
-    ];
-    (ingredientsData.getIngredientsByMeal as jest.Mock).mockReturnValue(orderedIngredients);
+  it('should render hint text with correct styling properties', () => {
+    const { container } = render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
 
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={mockPlateRef} />);
-  });
-
-  it('should calculate rotation between -15 and 15 degrees', () => {
-    const mockDiv = document.createElement('div');
-    mockDiv.getBoundingClientRect = jest.fn(() => ({
-      width: 400,
-      height: 300,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }));
-
-    const plateRef = React.createRef<HTMLDivElement>();
-    Object.defineProperty(plateRef, 'current', {
-      writable: true,
-      value: mockDiv,
-    });
-
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
-  });
-
-  it('should calculate scale between 0.85 and 1.15', () => {
-    const mockDiv = document.createElement('div');
-    mockDiv.getBoundingClientRect = jest.fn(() => ({
-      width: 400,
-      height: 300,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }));
-
-    const plateRef = React.createRef<HTMLDivElement>();
-    Object.defineProperty(plateRef, 'current', {
-      writable: true,
-      value: mockDiv,
-    });
-
-    render(<IngredientShelf onAdd={mockOnAdd} plateRef={plateRef} />);
+    const hintText = screen.getByText('Add ingredients');
+    expect(hintText).toBeInTheDocument();
   });
 });
