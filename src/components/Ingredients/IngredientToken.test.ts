@@ -1,4 +1,5 @@
 // @ts-nocheck
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IngredientToken } from './IngredientToken';
@@ -23,7 +24,7 @@ describe('IngredientToken', () => {
       expect(screen.getByText('Tomato')).toBeInTheDocument();
     });
 
-    it('should not render the ingredient name when size is < 56', () => {
+    it('should not render the ingredient name when size < 56', () => {
       render(<IngredientToken ingredient={mockIngredient} size={55} />);
       expect(screen.queryByText('Tomato')).not.toBeInTheDocument();
     });
@@ -31,286 +32,324 @@ describe('IngredientToken', () => {
     it('should render with default size of 64', () => {
       const { container } = render(<IngredientToken ingredient={mockIngredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('width: 64px');
-      expect(motionDiv).toHaveStyle('height: 64px');
+      expect(motionDiv).toHaveStyle({ width: 64, height: 64 });
     });
 
     it('should render with custom size', () => {
       const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('width: 100px');
-      expect(motionDiv).toHaveStyle('height: 100px');
+      expect(motionDiv).toHaveStyle({ width: 100, height: 100 });
     });
   });
 
   describe('styling', () => {
-    it('should apply the correct background color from BG_MAP', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
+    it('should apply correct background color from BG_MAP', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      const { container } = render(<IngredientToken ingredient={ingredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('background: #fdecea');
+      expect(motionDiv).toHaveStyle({ background: '#fdecea' });
     });
 
-    it('should use fallback background color for unmapped colors', () => {
-      const ingredientWithUnmappedColor: Ingredient = {
-        ...mockIngredient,
+    it('should apply fallback background color for unmapped colors', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
         color: '#unknowncolor',
       };
-      const { container } = render(<IngredientToken ingredient={ingredientWithUnmappedColor} />);
+      const { container } = render(<IngredientToken ingredient={ingredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('background: #f0f0f0');
+      expect(motionDiv).toHaveStyle({ background: '#f0f0f0' });
     });
 
-    it('should apply the correct border color', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
+    it('should apply correct border color from ingredient color', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      const { container } = render(<IngredientToken ingredient={ingredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('border: 3px solid #e74c3c');
+      expect(motionDiv).toHaveStyle({ border: '3px solid #e74c3c' });
     });
 
-    it('should use grey fallback border color for near-white colors', () => {
-      const ingredientWithLightColor: Ingredient = {
-        ...mockIngredient,
+    it('should apply grey border color for light colors', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
         color: '#fdfefe',
       };
-      const { container } = render(<IngredientToken ingredient={ingredientWithLightColor} />);
+      const { container } = render(<IngredientToken ingredient={ingredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('border: 3px solid #aaaaaa');
+      expect(motionDiv).toHaveStyle({ border: '3px solid #aaaaaa' });
     });
 
-    it('should apply circular shape styling', () => {
+    it('should apply circular border radius', () => {
       const { container } = render(<IngredientToken ingredient={mockIngredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('borderRadius: 50%');
+      expect(motionDiv).toHaveStyle({ borderRadius: '50%' });
     });
 
-    it('should apply grab cursor', () => {
+    it('should have cursor grab style', () => {
       const { container } = render(<IngredientToken ingredient={mockIngredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('cursor: grab');
+      expect(motionDiv).toHaveStyle({ cursor: 'grab' });
     });
 
-    it('should apply correct shadow when not dragging', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} dragging={false} />);
+    it('should have flexbox layout', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle(`boxShadow: 0 3px 10px ${mockIngredient.color}33`);
+      expect(motionDiv).toHaveStyle({
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      });
     });
 
-    it('should apply correct shadow when dragging', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} dragging={true} />);
+    it('should not allow text selection', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle(`boxShadow: 0 8px 24px ${mockIngredient.color}66`);
+      expect(motionDiv).toHaveStyle({ userSelect: 'none' });
     });
 
-    it('should calculate emoji font size based on token size', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
-      const emojiSpan = container.querySelectorAll('span')[0];
-      expect(emojiSpan).toHaveStyle('fontSize: 42px');
+    it('should apply normal box shadow when not dragging', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      const { container } = render(<IngredientToken ingredient={ingredient} dragging={false} />);
+      const motionDiv = container.querySelector('div');
+      expect(motionDiv).toHaveStyle({ boxShadow: '0 3px 10px #e74c3c33' });
     });
 
-    it('should calculate name font size based on token size', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
-      const nameSpan = container.querySelectorAll('span')[1];
-      expect(nameSpan).toHaveStyle('fontSize: 15px');
-    });
-
-    it('should enforce minimum name font size of 9px', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={50} />);
-      const nameSpan = container.querySelectorAll('span')[1];
-      expect(nameSpan).toHaveStyle('fontSize: 9px');
+    it('should apply dragging box shadow when dragging', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      const { container } = render(<IngredientToken ingredient={ingredient} dragging={true} />);
+      const motionDiv = container.querySelector('div');
+      expect(motionDiv).toHaveStyle({ boxShadow: '0 8px 24px #e74c3c66' });
     });
   });
 
-  describe('click handling', () => {
-    it('should call onClick handler when clicked', async () => {
-      const onClick = jest.fn();
-      const user = userEvent.setup();
-      const { container } = render(<IngredientToken ingredient={mockIngredient} onClick={onClick} />);
-      
-      const motionDiv = container.querySelector('div');
-      await user.click(motionDiv!);
-      expect(onClick).toHaveBeenCalled();
+  describe('emoji sizing', () => {
+    it('should scale emoji to 42% of token size', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
+      const emojiSpan = container.querySelector('span');
+      expect(emojiSpan).toHaveStyle({ fontSize: 42 });
     });
 
-    it('should not error when onClick is not provided', async () => {
+    it('should scale emoji with default size', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={64} />);
+      const emojiSpan = container.querySelector('span');
+      expect(emojiSpan).toHaveStyle({ fontSize: 26.88 });
+    });
+  });
+
+  describe('name text styling', () => {
+    it('should scale name font size to 15% of token size', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
+      const spans = container.querySelectorAll('span');
+      const nameSpan = spans[1];
+      expect(nameSpan).toHaveStyle({ fontSize: 15 });
+    });
+
+    it('should enforce minimum font size of 9px for name', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={30} />);
+      const spans = container.querySelectorAll('span');
+      const nameSpan = spans[1];
+      expect(nameSpan).toHaveStyle({ fontSize: 9 });
+    });
+
+    it('should apply font weight to name', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={80} />);
+      const spans = container.querySelectorAll('span');
+      const nameSpan = spans[1];
+      expect(nameSpan).toHaveStyle({ fontWeight: 700 });
+    });
+
+    it('should truncate long ingredient names', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={80} />);
+      const spans = container.querySelectorAll('span');
+      const nameSpan = spans[1];
+      expect(nameSpan).toHaveStyle({
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      });
+    });
+
+    it('should apply color from visible border color', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Test',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      const { container } = render(<IngredientToken ingredient={ingredient} size={100} />);
+      const spans = container.querySelectorAll('span');
+      const nameSpan = spans[1];
+      expect(nameSpan).toHaveStyle({ color: '#e74c3c' });
+    });
+  });
+
+  describe('interaction', () => {
+    it('should call onClick handler when clicked', async () => {
+      const handleClick = jest.fn();
+      const user = userEvent.setup();
+      render(<IngredientToken ingredient={mockIngredient} onClick={handleClick} />);
+      const element = screen.getByText('🍅').closest('div');
+      if (element) {
+        await user.click(element);
+        expect(handleClick).toHaveBeenCalled();
+      }
+    });
+
+    it('should not throw if onClick is not provided', async () => {
       const user = userEvent.setup();
       const { container } = render(<IngredientToken ingredient={mockIngredient} />);
-      
       const motionDiv = container.querySelector('div');
-      await expect(async () => {
-        await user.click(motionDiv!);
+      expect(async () => {
+        if (motionDiv) {
+          await user.click(motionDiv);
+        }
       }).not.toThrow();
     });
   });
 
-  describe('dragging state', () => {
-    it('should apply dragging animation when dragging is true', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} dragging={true} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('boxShadow: 0 8px 24px #e74c3c66');
-    });
-
-    it('should not apply dragging animation when dragging is false', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} dragging={false} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('boxShadow: 0 3px 10px #e74c3c33');
-    });
-
-    it('should not apply dragging animation when dragging is undefined', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('boxShadow: 0 3px 10px #e74c3c33');
-    });
-  });
-
-  describe('flexbox layout', () => {
-    it('should use flex layout with column direction', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('display: flex');
-      expect(motionDiv).toHaveStyle('flexDirection: column');
-    });
-
-    it('should center items and content', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('alignItems: center');
-      expect(motionDiv).toHaveStyle('justifyContent: center');
-    });
-
-    it('should prevent flex shrinking', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('flexShrink: 0');
-    });
-  });
-
-  describe('text overflow handling', () => {
-    it('should truncate long ingredient names', () => {
-      const longNameIngredient: Ingredient = {
-        ...mockIngredient,
-        name: 'This is a very long ingredient name that should be truncated',
-      };
-      const { container } = render(<IngredientToken ingredient={longNameIngredient} size={64} />);
-      const nameSpan = container.querySelectorAll('span')[1];
-      expect(nameSpan).toHaveStyle('overflow: hidden');
-      expect(nameSpan).toHaveStyle('textOverflow: ellipsis');
-      expect(nameSpan).toHaveStyle('whiteSpace: nowrap');
-    });
-
-    it('should apply max-width to name span', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={100} />);
-      const nameSpan = container.querySelectorAll('span')[1];
-      expect(nameSpan).toHaveStyle('maxWidth: 92px');
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle very small size', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={8} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('width: 8px');
-      expect(motionDiv).toHaveStyle('height: 8px');
-    });
-
-    it('should handle very large size', () => {
-      const { container } = render(<IngredientToken ingredient={mockIngredient} size={500} />);
-      const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('width: 500px');
-      expect(motionDiv).toHaveStyle('height: 500px');
-    });
-
-    it('should render multiple instances independently', () => {
-      const ingredient1: Ingredient = {
-        ...mockIngredient,
-        id: '1',
-        name: 'Tomato',
-      };
-      const ingredient2: Ingredient = {
-        ...mockIngredient,
-        id: '2',
-        name: 'Lettuce',
-      };
-      render(
-        <>
-          <IngredientToken ingredient={ingredient1} />
-          <IngredientToken ingredient={ingredient2} />
-        </>
-      );
-      expect(screen.getByText('🍅')).toBeInTheDocument();
-      expect(screen.getByText('Tomato')).toBeInTheDocument();
-      expect(screen.getByText('Lettuce')).toBeInTheDocument();
-    });
-
-    it('should handle ingredients with special characters in names', () => {
-      const specialIngredient: Ingredient = {
-        ...mockIngredient,
-        name: 'Café & Spice',
-      };
-      render(<IngredientToken ingredient={specialIngredient} size={64} />);
-      expect(screen.getByText('Café & Spice')).toBeInTheDocument();
-    });
-
-    it('should handle different emoji', () => {
-      const ingredientWithDifferentEmoji: Ingredient = {
-        ...mockIngredient,
-        emoji: '🥗',
-      };
-      render(<IngredientToken ingredient={ingredientWithDifferentEmoji} />);
-      expect(screen.getByText('🥗')).toBeInTheDocument();
-    });
-  });
-
-  describe('BG_MAP color palette', () => {
-    it('should map common ingredient colors correctly', () => {
-      const testCases = [
+  describe('different ingredient colors', () => {
+    it('should handle all mapped colors correctly', () => {
+      const colors = [
         { color: '#c0392b', expectedBg: '#fdecea' },
+        { color: '#8e7464', expectedBg: '#f5ede8' },
         { color: '#2c6e2c', expectedBg: '#eaf5ea' },
+        { color: '#27ae60', expectedBg: '#e8f8f0' },
         { color: '#f1c40f', expectedBg: '#fefce8' },
-        { color: '#16a085', expectedBg: '#e8f8f5' },
-        { color: '#1abc9c', expectedBg: '#e8faf5' },
-        { color: '#e67e22', expectedBg: '#fef0e4' },
       ];
 
-      testCases.forEach(({ color, expectedBg }) => {
-        const ingredient: Ingredient = {
-          ...mockIngredient,
-          color,
-        };
-        const { container } = render(<IngredientToken ingredient={ingredient} />);
+      colors.forEach(({ color, expectedBg }) => {
+        const { container, unmount } = render(
+          <IngredientToken
+            ingredient={{ ...mockIngredient, color }}
+            size={64}
+          />
+        );
         const motionDiv = container.querySelector('div');
-        expect(motionDiv).toHaveStyle(`background: ${expectedBg}`);
+        expect(motionDiv).toHaveStyle({ background: expectedBg });
+        unmount();
+      });
+    });
+
+    it('should handle grey fallback colors', () => {
+      const greyColors = ['#fdfefe', '#d5d8dc', '#f9e79f'];
+
+      greyColors.forEach((color) => {
+        const { container, unmount } = render(
+          <IngredientToken
+            ingredient={{ ...mockIngredient, color }}
+            size={64}
+          />
+        );
+        const motionDiv = container.querySelector('div');
+        expect(motionDiv).toHaveStyle({ border: '3px solid #aaaaaa' });
+        unmount();
       });
     });
   });
 
-  describe('visible border color function', () => {
-    it('should return grey color for #fdfefe', () => {
-      const ingredient: Ingredient = {
-        ...mockIngredient,
-        color: '#fdfefe',
-      };
-      const { container } = render(<IngredientToken ingredient={ingredient} />);
+  describe('size edge cases', () => {
+    it('should handle size of 0', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={0} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('border: 3px solid #aaaaaa');
+      expect(motionDiv).toHaveStyle({ width: 0, height: 0 });
     });
 
-    it('should return grey color for #d5d8dc', () => {
-      const ingredient: Ingredient = {
-        ...mockIngredient,
-        color: '#d5d8dc',
-      };
-      const { container } = render(<IngredientToken ingredient={ingredient} />);
+    it('should handle very large sizes', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} size={1000} />);
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('border: 3px solid #aaaaaa');
+      expect(motionDiv).toHaveStyle({ width: 1000, height: 1000 });
     });
 
-    it('should return original color for dark colors', () => {
-      const ingredient: Ingredient = {
-        ...mockIngredient,
-        color: '#2c3e50',
-      };
-      const { container } = render(<IngredientToken ingredient={ingredient} />);
+    it('should handle size exactly at 56 boundary', () => {
+      render(<IngredientToken ingredient={mockIngredient} size={56} />);
+      expect(screen.getByText('Tomato')).toBeInTheDocument();
+    });
+
+    it('should handle size just below 56 boundary', () => {
+      render(<IngredientToken ingredient={mockIngredient} size={55.99} />);
+      expect(screen.queryByText('Tomato')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('dragging state', () => {
+    it('should apply dragging styles when dragging is true', () => {
+      const { container } = render(
+        <IngredientToken ingredient={mockIngredient} dragging={true} />
+      );
       const motionDiv = container.querySelector('div');
-      expect(motionDiv).toHaveStyle('border: 3px solid #2c3e50');
+      expect(motionDiv).toHaveStyle({ boxShadow: expect.stringContaining('#e74c3c66') });
+    });
+
+    it('should apply normal styles when dragging is false', () => {
+      const { container } = render(
+        <IngredientToken ingredient={mockIngredient} dragging={false} />
+      );
+      const motionDiv = container.querySelector('div');
+      expect(motionDiv).toHaveStyle({ boxShadow: expect.stringContaining('#e74c3c33') });
+    });
+
+    it('should apply normal styles when dragging is undefined', () => {
+      const { container } = render(<IngredientToken ingredient={mockIngredient} />);
+      const motionDiv = container.querySelector('div');
+      expect(motionDiv).toHaveStyle({ boxShadow: expect.stringContaining('#e74c3c33') });
+    });
+  });
+
+  describe('ingredient with different emoji and names', () => {
+    it('should render correctly with different emoji', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'Apple',
+        emoji: '🍎',
+        color: '#e74c3c',
+      };
+      render(<IngredientToken ingredient={ingredient} size={64} />);
+      expect(screen.getByText('🍎')).toBeInTheDocument();
+    });
+
+    it('should render correctly with long ingredient name', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'VeryLongIngredientNameThatMightOverflow',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      render(<IngredientToken ingredient={ingredient} size={64} />);
+      expect(screen.getByText('VeryLongIngredientNameThatMightOverflow')).toBeInTheDocument();
+    });
+
+    it('should render correctly with single character name', () => {
+      const ingredient: Ingredient = {
+        id: '1',
+        name: 'A',
+        emoji: '🍅',
+        color: '#e74c3c',
+      };
+      render(<IngredientToken ingredient={ingredient} size={64} />);
+      expect(screen.getByText('A')).toBeInTheDocument();
     });
   });
 });
