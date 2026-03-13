@@ -1,7 +1,5 @@
 // @ts-nocheck
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { render, screen, fireEvent, waitFor, vi } from '@testing-library/react';
 import { MathQuiz } from './MathQuiz';
 import { useGameStore } from '../../store/gameStore';
 import { useLanguageStore } from '../../store/languageStore';
@@ -10,499 +8,503 @@ import { getMealInfo } from '../../data/meals';
 import { generateQuestions } from './generateQuestions';
 import { useT } from '../../i18n/useT';
 
-jest.mock('../../store/gameStore');
-jest.mock('../../store/languageStore');
-jest.mock('../../hooks/useSpeech');
-jest.mock('../../data/meals');
-jest.mock('./generateQuestions');
-jest.mock('../../i18n/useT');
-jest.mock('./NumberPad', () => ({
-  NumberPad: ({ onSubmit }: { onSubmit: (value: number) => void }) => (
-    <button onClick={() => onSubmit(42)}>Submit Answer</button>
+vi.mock('../../store/gameStore');
+vi.mock('../../store/languageStore');
+vi.mock('../../hooks/useSpeech');
+vi.mock('../../data/meals');
+vi.mock('./generateQuestions');
+vi.mock('../../i18n/useT');
+vi.mock('../Chef/ChefDialog', () => ({
+  ChefDialog: () => <div data-testid="chef-dialog">Chef Dialog</div>,
+}));
+vi.mock('../UI/StarScore', () => ({
+  StarScore: () => <div data-testid="star-score">Star Score</div>,
+}));
+vi.mock('../UI/Button', () => ({
+  Button: ({ children, onClick, variant, size }: any) => (
+    <button data-testid={`button-${variant}`} onClick={onClick}>
+      {children}
+    </button>
   ),
 }));
-jest.mock('../Chef/ChefDialog', () => ({
-  ChefDialog: () => <div>Chef Dialog</div>,
-}));
-jest.mock('../UI/StarScore', () => ({
-  StarScore: () => <div>Star Score</div>,
-}));
-jest.mock('../UI/Button', () => ({
-  Button: ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-    <button onClick={onClick}>{children}</button>
+vi.mock('./NumberPad', () => ({
+  NumberPad: ({ onSubmit }: any) => (
+    <div data-testid="number-pad">
+      <button onClick={() => onSubmit(5)}>Submit 5</button>
+      <button onClick={() => onSubmit(10)}>Submit 10</button>
+    </div>
   ),
 }));
 
 describe('MathQuiz', () => {
+  const mockAddScore = vi.fn();
+  const mockNextQuestion = vi.fn();
+  const mockSetPhase = vi.fn();
+  const mockSetChefMessage = vi.fn();
+  const mockSpeak = vi.fn();
+
+  const mockQuestions = [
+    {
+      id: '1',
+      question: 'What is 2 + 3?',
+      answer: 5,
+      hint: 'Count on your fingers',
+      visual: '🍕',
+    },
+    {
+      id: '2',
+      question: 'What is 5 + 5?',
+      answer: 10,
+      hint: 'Double five',
+      visual: '🥗',
+    },
+  ];
+
   const mockMealInfo = {
-    bgColor: '#fff9c4',
-    accentColor: '#f57f17',
+    bgColor: '#fff0e6',
+    accentColor: '#ff6b35',
   };
 
   const mockTranslations = {
     mathQuiz: {
       title: 'Math Quiz',
-      questionOf: (curr: number, total: number) => `Question ${curr} of ${total}`,
-      correctMessages: ['Great!', 'Excellent!'],
+      questionOf: (current: number, total: number) => `Question ${current} of ${total}`,
+      hintPrefix: 'Hint:',
+      skipButton: 'Skip',
+      correctMessages: ['Great!', 'Awesome!'],
       wrongMessages: ['Try again!', 'Not quite!'],
       nextMessage: 'Next question!',
-      finalMessage: 'You finished!',
-      skipButton: 'Skip',
-      hintPrefix: 'Hint:',
+      finalMessage: 'You did it!',
       skipReveal: (answer: number) => `The answer was ${answer}`,
-    },
-    kitchen: {
-      doneMessage: 'Well done!',
     },
     meals: {
       pizza: { name: 'Pizza' },
     },
     ingredients: {
       cheese: 'Cheese',
-      tomato: 'Tomato',
+    },
+    kitchen: {
+      doneMessage: 'Well done!',
     },
   };
 
-  const mockQuestions = [
-    {
-      id: '1',
-      question: 'How many pizzas?',
-      answer: 2,
-      visual: '🍕',
-      hint: 'Count the slices',
-    },
-    {
-      id: '2',
-      question: 'How many toppings?',
-      answer: 5,
-      visual: '🧀',
-      hint: 'Count all ingredients',
-    },
-  ];
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    (useGameStore as jest.Mock).mockReturnValue({
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [
+        { ingredientId: 'cheese', id: '1' },
+        { ingredientId: 'cheese', id: '2' },
+      ],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 0,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    vi.mocked(useLanguageStore).mockReturnValue({
+      language: 'en',
+    } as any);
+
+    vi.mocked(useSpeech).mockReturnValue({
+      speak: mockSpeak,
+    } as any);
+
+    vi.mocked(getMealInfo).mockReturnValue(mockMealInfo);
+
+    vi.mocked(generateQuestions).mockReturnValue(mockQuestions);
+
+    vi.mocked(useT).mockReturnValue(mockTranslations as any);
+  });
+
+  it('should render the MathQuiz component with header and current question', () => {
+    render(<MathQuiz />);
+
+    expect(screen.getByText('Math Quiz')).toBeInTheDocument();
+    expect(screen.getByTestId('star-score')).toBeInTheDocument();
+    expect(screen.getByTestId('chef-dialog')).toBeInTheDocument();
+    expect(screen.getByText('What is 2 + 3?')).toBeInTheDocument();
+  });
+
+  it('should display question counter', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument();
+  });
+
+  it('should display ingredient summary', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText(/YOUR INGREDIENTS:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cheese ×2/)).toBeInTheDocument();
+  });
+
+  it('should display progress dots for all questions', () => {
+    render(<MathQuiz />);
+    const progressDots = screen.getAllByRole('presentation').filter(
+      (el) => el.style.width === '28px'
+    );
+    expect(progressDots).toHaveLength(2);
+  });
+
+  it('should speak the question when it appears', () => {
+    render(<MathQuiz />);
+    expect(mockSpeak).toHaveBeenCalledWith('What is 2 + 3?');
+  });
+
+  it('should speak the hint when showHint becomes true', async () => {
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
+    fireEvent.click(submitWrongButton);
+
+    await waitFor(() => {
+      expect(mockSpeak).toHaveBeenCalledWith('Hint: Count on your fingers');
+    });
+  });
+
+  it('should handle correct answer submission', async () => {
+    render(<MathQuiz />);
+    const submitCorrectButton = screen.getByText('Submit 5');
+    fireEvent.click(submitCorrectButton);
+
+    await waitFor(() => {
+      expect(mockAddScore).toHaveBeenCalledWith(10);
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        expect.stringContaining('+10 ⭐'),
+        'cheering'
+      );
+    });
+  });
+
+  it('should award 10 points for correct answer on first attempt', async () => {
+    render(<MathQuiz />);
+    const submitButton = screen.getByText('Submit 5');
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockAddScore).toHaveBeenCalledWith(10);
+    });
+  });
+
+  it('should award 7 points for correct answer on second attempt', async () => {
+    render(<MathQuiz />);
+    const submitWrong = screen.getByText('Submit 10');
+    const submitCorrect = screen.getByText('Submit 5');
+
+    fireEvent.click(submitWrong);
+
+    await waitFor(() => {
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        'thinking'
+      );
+    });
+
+    fireEvent.click(submitCorrect);
+
+    await waitFor(() => {
+      expect(mockAddScore).toHaveBeenCalledWith(7);
+    });
+  });
+
+  it('should award 5 points for correct answer on third attempt', async () => {
+    render(<MathQuiz />);
+    const submitWrong = screen.getByText('Submit 10');
+    const submitCorrect = screen.getByText('Submit 5');
+
+    fireEvent.click(submitWrong);
+    await waitFor(() => {
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        'thinking'
+      );
+    });
+
+    fireEvent.click(submitWrong);
+    await waitFor(() => {
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        'thinking'
+      );
+    });
+
+    fireEvent.click(submitCorrect);
+
+    await waitFor(() => {
+      expect(mockAddScore).toHaveBeenCalledWith(5);
+    });
+  });
+
+  it('should display wrong feedback for incorrect answer', async () => {
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
+    fireEvent.click(submitWrongButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('❌')).toBeInTheDocument();
+    });
+  });
+
+  it('should display hint after wrong answer', async () => {
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
+    fireEvent.click(submitWrongButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hint:/)).toBeInTheDocument();
+    });
+  });
+
+  it('should show skip button after 2 wrong attempts', async () => {
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
+
+    fireEvent.click(submitWrongButton);
+    await waitFor(() => {
+      expect(screen.queryByTestId('button-secondary')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(submitWrongButton);
+    await waitFor(() => {
+      expect(screen.getByTestId('button-secondary')).toBeInTheDocument();
+    });
+  });
+
+  it('should move to next question on correct answer', async () => {
+    render(<MathQuiz />);
+    const submitCorrectButton = screen.getByText('Submit 5');
+    fireEvent.click(submitCorrectButton);
+
+    await waitFor(
+      () => {
+        expect(mockNextQuestion).toHaveBeenCalled();
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('should transition to celebration phase when all questions are answered', async () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 1,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    vi.mocked(generateQuestions).mockReturnValue(mockQuestions);
+
+    render(<MathQuiz />);
+    const submitCorrectButton = screen.getByText('Submit 10');
+    fireEvent.click(submitCorrectButton);
+
+    await waitFor(
+      () => {
+        expect(mockSetPhase).toHaveBeenCalledWith('celebration');
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('should handle skip button click', async () => {
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
+
+    fireEvent.click(submitWrongButton);
+    fireEvent.click(submitWrongButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('button-secondary')).toBeInTheDocument();
+    });
+
+    const skipButton = screen.getByTestId('button-secondary');
+    fireEvent.click(skipButton);
+
+    await waitFor(() => {
+      expect(mockSetChefMessage).toHaveBeenCalledWith(
+        'The answer was 5',
+        'happy'
+      );
+    });
+  });
+
+  it('should transition to celebration on skip when on last question', async () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 1,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 5');
+
+    fireEvent.click(submitWrongButton);
+    fireEvent.click(submitWrongButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('button-secondary')).toBeInTheDocument();
+    });
+
+    const skipButton = screen.getByTestId('button-secondary');
+    fireEvent.click(skipButton);
+
+    await waitFor(() => {
+      expect(mockSetPhase).toHaveBeenCalledWith('celebration');
+    });
+  });
+
+  it('should auto-transition to celebration when isFinished becomes true', async () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 2,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    render(<MathQuiz />);
+
+    await waitFor(
+      () => {
+        expect(mockSetPhase).toHaveBeenCalledWith('celebration');
+      },
+      { timeout: 500 }
+    );
+  });
+
+  it('should regenerate questions when language changes', () => {
+    const { rerender } = render(<MathQuiz />);
+
+    expect(generateQuestions).toHaveBeenCalled();
+    const firstCallCount = vi.mocked(generateQuestions).mock.calls.length;
+
+    vi.mocked(useLanguageStore).mockReturnValue({
+      language: 'fr',
+    } as any);
+
+    rerender(<MathQuiz />);
+
+    expect(vi.mocked(generateQuestions).mock.calls.length).toBeGreaterThan(
+      firstCallCount
+    );
+  });
+
+  it('should update chef message when translations change', () => {
+    render(<MathQuiz />);
+
+    expect(mockSetChefMessage).toHaveBeenCalledWith('Well done!', 'excited');
+  });
+
+  it('should not render NumberPad when isFinished is true', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 2,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    render(<MathQuiz />);
+
+    expect(screen.queryByTestId('number-pad')).not.toBeInTheDocument();
+  });
+
+  it('should display visual emoji for question', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('🍕')).toBeInTheDocument();
+  });
+
+  it('should handle empty placedIngredients', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 0,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    render(<MathQuiz />);
+
+    expect(screen.queryByText(/YOUR INGREDIENTS:/i)).not.toBeInTheDocument();
+  });
+
+  it('should correctly aggregate ingredient counts', () => {
+    vi.mocked(useGameStore).mockReturnValue({
       selectedMeal: 'pizza',
       placedIngredients: [
         { ingredientId: 'cheese', id: '1' },
         { ingredientId: 'cheese', id: '2' },
         { ingredientId: 'tomato', id: '3' },
       ],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: jest.fn(),
-    });
-
-    (useLanguageStore as jest.Mock).mockReturnValue({
-      language: 'en',
-    });
-
-    (useSpeech as jest.Mock).mockReturnValue({
-      speak: jest.fn(),
-    });
-
-    (getMealInfo as jest.Mock).mockReturnValue(mockMealInfo);
-    (generateQuestions as jest.Mock).mockReturnValue(mockQuestions);
-    (useT as jest.Mock).mockReturnValue(mockTranslations);
-  });
-
-  it('renders the quiz title and header', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText('Math Quiz')).toBeInTheDocument();
-  });
-
-  it('renders the chef dialog and star score', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText('Chef Dialog')).toBeInTheDocument();
-    expect(screen.getByText('Star Score')).toBeInTheDocument();
-  });
-
-  it('displays progress dots for each question', () => {
-    render(<MathQuiz />);
-    const dots = document.querySelectorAll('[style*="height: 8px"]');
-    expect(dots.length).toBe(mockQuestions.length);
-  });
-
-  it('displays ingredient summary with counts', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText(/YOUR INGREDIENTS:/)).toBeInTheDocument();
-    expect(screen.getByText(/Cheese/)).toBeInTheDocument();
-    expect(screen.getByText(/×2/)).toBeInTheDocument();
-    expect(screen.getByText(/Tomato/)).toBeInTheDocument();
-    expect(screen.getByText(/×1/)).toBeInTheDocument();
-  });
-
-  it('displays the current question', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText('How many pizzas?')).toBeInTheDocument();
-  });
-
-  it('displays the question number and total', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument();
-  });
-
-  it('displays the visual emoji for the question', () => {
-    render(<MathQuiz />);
-    expect(screen.getByText('🍕')).toBeInTheDocument();
-  });
-
-  it('calls speak when component mounts and question appears', () => {
-    const mockSpeak = jest.fn();
-    (useSpeech as jest.Mock).mockReturnValue({
-      speak: mockSpeak,
-    });
-
-    render(<MathQuiz />);
-    expect(mockSpeak).toHaveBeenCalledWith('How many pizzas?');
-  });
-
-  it('handles correct answer submission', async () => {
-    const mockAddScore = jest.fn();
-    const mockNextQuestion = jest.fn();
-    const mockSetChefMessage = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
+      familySize: 2,
       pizzaSlices: 8,
       currentQuestionIndex: 0,
       addScore: mockAddScore,
       nextQuestion: mockNextQuestion,
-      setPhase: jest.fn(),
-      setChefMessage: mockSetChefMessage,
-    });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-    await userEvent.click(submitButton);
-
-    expect(mockAddScore).toHaveBeenCalledWith(10);
-    expect(mockSetChefMessage).toHaveBeenCalledWith(expect.stringContaining('+10'), 'cheering');
-
-    await waitFor(() => {
-      expect(mockNextQuestion).toHaveBeenCalled();
-    }, { timeout: 2000 });
-  });
-
-  it('awards fewer points on second attempt', async () => {
-    const mockAddScore = jest.fn();
-    const mockSetChefMessage = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: mockSetChefMessage,
-    });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // First incorrect attempt
-    await userEvent.click(submitButton);
-    expect(mockAddScore).not.toHaveBeenCalled();
-
-    // Wait for feedback to clear
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
-      },
-      { timeout: 1500 }
-    );
-
-    // Second attempt (correct)
-    await userEvent.click(submitButton);
-    expect(mockAddScore).toHaveBeenCalledWith(7);
-  });
-
-  it('awards minimum points on third attempt', async () => {
-    const mockAddScore = jest.fn();
-    const mockSetChefMessage = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: mockAddScore,
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: mockSetChefMessage,
-    });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // First wrong attempt
-    await userEvent.click(submitButton);
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
-      },
-      { timeout: 1500 }
-    );
-
-    // Second wrong attempt
-    await userEvent.click(submitButton);
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
-      },
-      { timeout: 1500 }
-    );
-
-    // Third attempt (correct)
-    await userEvent.click(submitButton);
-    expect(mockAddScore).toHaveBeenCalledWith(5);
-  });
-
-  it('shows hint after wrong answer', async () => {
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Answer incorrectly
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Hint:/)).toBeInTheDocument();
-      expect(screen.getByText(/Count the slices/)).toBeInTheDocument();
-    });
-  });
-
-  it('speaks the hint when it appears', async () => {
-    const mockSpeak = jest.fn();
-    (useSpeech as jest.Mock).mockReturnValue({
-      speak: mockSpeak,
-    });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Answer incorrectly to trigger hint
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockSpeak).toHaveBeenCalledWith('Hint: Count the slices');
-    });
-  });
-
-  it('shows skip button after 2 attempts', async () => {
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // First wrong attempt
-    await userEvent.click(submitButton);
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
-      },
-      { timeout: 1500 }
-    );
-
-    // Second wrong attempt
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Skip')).toBeInTheDocument();
-    });
-  });
-
-  it('handles skip action', async () => {
-    const mockSetPhase = jest.fn();
-    const mockSetChefMessage = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
       setPhase: mockSetPhase,
       setChefMessage: mockSetChefMessage,
-    });
+    } as any);
 
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Trigger 2 wrong answers to show skip button
-    await userEvent.click(submitButton);
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
+    vi.mocked(useT).mockReturnValue({
+      ...mockTranslations,
+      ingredients: {
+        cheese: 'Cheese',
+        tomato: 'Tomato',
       },
-      { timeout: 1500 }
-    );
-
-    await userEvent.click(submitButton);
-    await waitFor(() => {
-      expect(screen.getByText('Skip')).toBeInTheDocument();
-    });
-
-    const skipButton = screen.getByText('Skip');
-    await userEvent.click(skipButton);
-
-    expect(mockSetChefMessage).toHaveBeenCalledWith('The answer was 2', 'happy');
-  });
-
-  it('advances to celebration phase after last question is answered correctly', async () => {
-    const mockSetPhase = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 1, // Last question
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: mockSetPhase,
-      setChefMessage: jest.fn(),
-    });
+    } as any);
 
     render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-    await userEvent.click(submitButton);
+
+    expect(screen.getByText(/Cheese ×2/)).toBeInTheDocument();
+    expect(screen.getByText(/Tomato ×1/)).toBeInTheDocument();
+  });
+
+  it('should display correct feedback emoji on correct answer', async () => {
+    render(<MathQuiz />);
+    const submitCorrectButton = screen.getByText('Submit 5');
+    fireEvent.click(submitCorrectButton);
 
     await waitFor(() => {
-      expect(mockSetPhase).toHaveBeenCalledWith('celebration');
-    }, { timeout: 2000 });
-  });
-
-  it('advances to celebration phase after skipping last question', async () => {
-    const mockSetPhase = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 1, // Last question
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: mockSetPhase,
-      setChefMessage: jest.fn(),
+      expect(screen.getByText('✅')).toBeInTheDocument();
     });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Trigger 2 wrong answers to show skip button
-    await userEvent.click(submitButton);
-    await waitFor(
-      () => {
-        expect(screen.queryByText('❌')).not.toBeInTheDocument();
-      },
-      { timeout: 1500 }
-    );
-
-    await userEvent.click(submitButton);
-    await waitFor(() => {
-      expect(screen.getByText('Skip')).toBeInTheDocument();
-    });
-
-    const skipButton = screen.getByText('Skip');
-    await userEvent.click(skipButton);
-
-    expect(mockSetPhase).toHaveBeenCalledWith('celebration');
   });
 
-  it('regenerates questions when language changes', () => {
-    const { rerender } = render(<MathQuiz />);
-
-    expect(generateQuestions).toHaveBeenCalled();
-
-    (useLanguageStore as jest.Mock).mockReturnValue({
-      language: 'es',
-    });
-
-    rerender(<MathQuiz />);
-
-    // Should be called again due to language dependency
-    expect(generateQuestions).toHaveBeenCalledTimes(2);
-  });
-
-  it('updates chef message when translations change', () => {
-    const mockSetChefMessage = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: mockSetChefMessage,
-    });
-
+  it('should reset state after correct answer', async () => {
     render(<MathQuiz />);
+    const submitWrongButton = screen.getByText('Submit 10');
 
-    expect(mockSetChefMessage).toHaveBeenCalledWith('Well done!', 'excited');
-  });
+    fireEvent.click(submitWrongButton);
 
-  it('displays feedback emoji on correct answer', async () => {
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-    await userEvent.click(submitButton);
-
-    expect(screen.getByText('✅')).toBeInTheDocument();
-  });
-
-  it('displays feedback emoji on wrong answer', async () => {
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Submit wrong answer
-    await userEvent.click(submitButton);
-
-    expect(screen.getByText('❌')).toBeInTheDocument();
-  });
-
-  it('advances to next question after correct answer delay', async () => {
-    const mockNextQuestion = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: jest.fn(),
-      nextQuestion: mockNextQuestion,
-      setPhase: jest.fn(),
-      setChefMessage: jest.fn(),
-    });
-
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-    await userEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockNextQuestion).toHaveBeenCalled();
-    }, { timeout: 2000 });
-  });
-
-  it('clears attempts and hint after correct answer', async () => {
-    render(<MathQuiz />);
-    const submitButton = screen.getByText('Submit Answer');
-
-    // Wrong answer to show hint
-    await userEvent.click(submitButton);
     await waitFor(() => {
       expect(screen.getByText(/Hint:/)).toBeInTheDocument();
     });
 
-    // Correct answer
-    await userEvent.click(submitButton);
+    const submitCorrectButton = screen.getByText('Submit 5');
+    fireEvent.click(submitCorrectButton);
 
     await waitFor(
       () => {
@@ -512,97 +514,49 @@ describe('MathQuiz', () => {
     );
   });
 
-  it('renders with proper styling and layout', () => {
+  it('should handle currentQ being null gracefully', () => {
+    vi.mocked(generateQuestions).mockReturnValue([]);
+
     render(<MathQuiz />);
-    const container = screen.getByText('Math Quiz').closest('div')?.parentElement;
-    expect(container).toBeInTheDocument();
+
+    expect(screen.queryByText(/What is/)).not.toBeInTheDocument();
   });
 
-  it('does not render question when all questions are finished', async () => {
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 2, // Beyond questions.length (2)
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: jest.fn(),
-    });
+  it('should display correct meal background color', () => {
+    const { container } = render(<MathQuiz />);
+    const mainDiv = container.firstChild;
 
-    render(<MathQuiz />);
-
-    await waitFor(() => {
-      expect(screen.queryByText('How many pizzas?')).not.toBeInTheDocument();
-    });
-  });
-
-  it('sets celebration phase when finished questions state is reached', async () => {
-    const mockSetPhase = jest.fn();
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 10, // Beyond questions
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: mockSetPhase,
-      setChefMessage: jest.fn(),
-    });
-
-    render(<MathQuiz />);
-
-    await waitFor(() => {
-      expect(mockSetPhase).toHaveBeenCalledWith('celebration');
-    }, { timeout: 500 });
-  });
-
-  it('handles missing ingredient translations gracefully', () => {
-    (useGameStore as jest.Mock).mockReturnValue({
-      selectedMeal: 'pizza',
-      placedIngredients: [
-        { ingredientId: 'unknown_ingredient', id: '1' },
-      ],
-      familySize: 4,
-      pizzaSlices: 8,
-      currentQuestionIndex: 0,
-      addScore: jest.fn(),
-      nextQuestion: jest.fn(),
-      setPhase: jest.fn(),
-      setChefMessage: jest.fn(),
-    });
-
-    render(<MathQuiz />);
-
-    expect(screen.getByText(/YOUR INGREDIENTS:/)).toBeInTheDocument();
-    expect(screen.getByText(/unknown_ingredient/)).toBeInTheDocument();
-  });
-
-  it('does not show skip button before 2 attempts', () => {
-    render(<MathQuiz />);
-    expect(screen.queryByText('Skip')).not.toBeInTheDocument();
-  });
-
-  it('uses meal accent color for progress dots styling', () => {
-    render(<MathQuiz />);
-    const dots = document.querySelectorAll('[style*="background"]');
-    expect(dots.length).toBeGreaterThan(0);
-  });
-
-  it('generates questions with correct parameters', () => {
-    render(<MathQuiz />);
-
-    expect(generateQuestions).toHaveBeenCalledWith(
-      expect.any(Array),
-      4,
-      8,
-      mockTranslations.mathQuiz,
-      'Pizza',
-      expect.any(Function),
-      'pizza',
-      'en'
+    expect(mainDiv).toHaveStyle(
+      `background: linear-gradient(135deg, ${mockMealInfo.bgColor} 0%, white 100%)`
     );
+  });
+
+  it('should use meal accent color for header and UI elements', () => {
+    render(<MathQuiz />);
+    expect(screen.getByText('Math Quiz')).toHaveStyle(
+      `color: ${mockMealInfo.accentColor}`
+    );
+  });
+
+  it('should display all progress dots as completed for previous questions', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      selectedMeal: 'pizza',
+      placedIngredients: [],
+      familySize: 2,
+      pizzaSlices: 8,
+      currentQuestionIndex: 1,
+      addScore: mockAddScore,
+      nextQuestion: mockNextQuestion,
+      setPhase: mockSetPhase,
+      setChefMessage: mockSetChefMessage,
+    } as any);
+
+    const { container } = render(<MathQuiz />);
+    const dots = Array.from(container.querySelectorAll('[style*="width"]')).filter(
+      (el) => el.getAttribute('style')?.includes('28px')
+    );
+
+    expect(dots[0]).toHaveStyle('background: #27ae60');
+    expect(dots[1]).toHaveStyle(`background: ${mockMealInfo.accentColor}`);
   });
 });
