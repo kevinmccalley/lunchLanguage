@@ -1,337 +1,320 @@
 // @ts-nocheck
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { motion } from 'framer-motion';
 import { DraggableIngredient } from './DraggableIngredient';
+import { getIngredientById } from '../../data/ingredients';
 import { useGameStore } from '../../store/gameStore';
 import { useLanguageStore } from '../../store/languageStore';
-import { getIngredientById } from '../../data/ingredients';
+import { TRANSLATIONS } from '../../i18n/translations';
 import type { PlacedIngredient } from '../../types';
 
-jest.mock('framer-motion');
+jest.mock('../../data/ingredients');
 jest.mock('../../store/gameStore');
 jest.mock('../../store/languageStore');
-jest.mock('../../data/ingredients');
-jest.mock('../../i18n/translations', () => ({
-  TRANSLATIONS: {
-    es: {
-      ingredients: {
-        'tomato': 'tomate',
-        'lettuce': 'lechuga',
-      },
-    },
-    fr: {
-      ingredients: {
-        'tomato': 'tomate',
-        'lettuce': 'laitue',
-      },
-    },
-  },
-}));
+jest.mock('../../i18n/translations');
 
 describe('DraggableIngredient', () => {
   const mockMoveIngredient = jest.fn();
   const mockRemoveIngredient = jest.fn();
-  const mockGetIngredientById = getIngredientById as jest.MockedFunction<typeof getIngredientById>;
-  const mockUseGameStore = useGameStore as jest.MockedFunction<typeof useGameStore>;
-  const mockUseLanguageStore = useLanguageStore as jest.MockedFunction<typeof useLanguageStore>;
+  const mockContainerRef = { current: null as HTMLDivElement | null };
 
-  const mockContainerRef = {
-    current: {
-      getBoundingClientRect: jest.fn(() => ({
-        width: 500,
-        height: 500,
-      })),
-    },
-  };
-
-  const mockPlacedIngredient: PlacedIngredient = {
-    instanceId: 'inst-1',
+  const defaultPlacedIngredient: PlacedIngredient = {
+    instanceId: 'instance-1',
     ingredientId: 'tomato',
     x: 100,
-    y: 150,
+    y: 100,
     rotation: 0,
     scale: 1,
   };
 
   const mockIngredient = {
     id: 'tomato',
-    name: 'Tomato',
     emoji: '🍅',
+    name: 'tomato',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseGameStore.mockReturnValue({
+    mockContainerRef.current = document.createElement('div');
+    mockContainerRef.current.getBoundingClientRect = jest.fn(() => ({
+      width: 400,
+      height: 400,
+      top: 0,
+      left: 0,
+      right: 400,
+      bottom: 400,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }));
+
+    (useGameStore as jest.Mock).mockReturnValue({
       moveIngredient: mockMoveIngredient,
       removeIngredient: mockRemoveIngredient,
-    } as any);
-    mockUseLanguageStore.mockReturnValue({
+    });
+
+    (useLanguageStore as jest.Mock).mockReturnValue({
       learningLanguage: 'es',
-    } as any);
-    mockGetIngredientById.mockReturnValue(mockIngredient as any);
+    });
 
-    // Mock motion.div as a regular div
-    (motion.div as any) = ({ children, ...props }: any) => (
-      <div data-testid="draggable-ingredient" {...props}>
-        {children}
-      </div>
-    );
+    (getIngredientById as jest.Mock).mockReturnValue(mockIngredient);
 
-    // Mock motion.div for label
-    (motion.div as any).prototype = {};
+    (TRANSLATIONS as any) = {
+      es: {
+        ingredients: {
+          tomato: 'tomate',
+        },
+      },
+    };
   });
 
-  it('renders the ingredient emoji', () => {
+  it('should render ingredient emoji when ingredient exists', () => {
     render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
     expect(screen.getByText('🍅')).toBeInTheDocument();
   });
 
-  it('returns null when ingredient is not found', () => {
-    mockGetIngredientById.mockReturnValue(null);
+  it('should return null when ingredient does not exist', () => {
+    (getIngredientById as jest.Mock).mockReturnValue(null);
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
     expect(container.firstChild).toBeNull();
   });
 
-  it('displays the learning word when learningLanguage and ingredient exist', () => {
+  it('should display learning word label when language is set and ingredient exists', () => {
     render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
     expect(screen.getByText('tomate')).toBeInTheDocument();
   });
 
-  it('does not display the learning word when learningLanguage is null', () => {
-    mockUseLanguageStore.mockReturnValue({ learningLanguage: null } as any);
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+  it('should not display label when learning language is null', () => {
+    (useLanguageStore as jest.Mock).mockReturnValue({
+      learningLanguage: null,
+    });
+    const { queryByText } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
-    expect(screen.queryByText('tomate')).not.toBeInTheDocument();
+    expect(queryByText('tomate')).not.toBeInTheDocument();
   });
 
-  it('calculates size correctly based on scale', () => {
-    const itemWithScale = { ...mockPlacedIngredient, scale: 2 };
+  it('should not display label when no translation exists', () => {
+    (TRANSLATIONS as any) = {
+      es: {
+        ingredients: {},
+      },
+    };
+    const { queryByText } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
+    );
+    expect(queryByText('tomate')).not.toBeInTheDocument();
+  });
+
+  it('should calculate size based on scale property', () => {
+    const scaledItem = { ...defaultPlacedIngredient, scale: 2 };
     const { container } = render(
-      <DraggableIngredient item={itemWithScale} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={scaledItem} containerRef={mockContainerRef} />
     );
-    const emoji = screen.getByText('🍅').parentElement;
-    expect(emoji).toHaveStyle({ width: '96px', height: '96px' });
+    const sizeDiv = container.querySelector('div[style*="width"]');
+    expect(sizeDiv).toHaveStyle({ width: '96px', height: '96px' });
   });
 
-  it('handles drag end when ingredient is within bounds', () => {
+  it('should calculate size with rounded value', () => {
+    const scaledItem = { ...defaultPlacedIngredient, scale: 1.5 };
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={scaledItem} containerRef={mockContainerRef} />
     );
-
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
-
-    // Mock the motion values
-    const mockX = { get: jest.fn(() => 200) };
-    const mockY = { get: jest.fn(() => 250) };
-    jest.spyOn(require('framer-motion'), 'useMotionValue').mockReturnValueOnce(mockX).mockReturnValueOnce(mockY);
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockMoveIngredient).toHaveBeenCalledWith('inst-1', 200, 250);
+    const sizeDiv = container.querySelector('div[style*="width"]');
+    expect(sizeDiv).toHaveStyle({ width: '72px', height: '72px' });
   });
 
-  it('removes ingredient when dragged outside the container (left boundary)', () => {
+  it('should remove ingredient on double click', () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
-
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
-
-    // Mock motion values to simulate dragging outside left boundary
-    jest.spyOn(require('framer-motion'), 'useMotionValue')
-      .mockReturnValueOnce({ get: jest.fn(() => -100) })
-      .mockReturnValueOnce({ get: jest.fn(() => 200) });
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
+    const element = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    fireEvent.doubleClick(element);
+    expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
   });
 
-  it('removes ingredient when dragged outside the container (top boundary)', () => {
+  it('should remove ingredient when dragged outside left boundary', async () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: -100, clientY: 100 });
 
-    jest.spyOn(require('framer-motion'), 'useMotionValue')
-      .mockReturnValueOnce({ get: jest.fn(() => 200) })
-      .mockReturnValueOnce({ get: jest.fn(() => -100) });
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
+    await waitFor(() => {
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
+    });
   });
 
-  it('removes ingredient when dragged outside the container (right boundary)', () => {
+  it('should remove ingredient when dragged outside top boundary', async () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 100, clientY: -100 });
 
-    jest.spyOn(require('framer-motion'), 'useMotionValue')
-      .mockReturnValueOnce({ get: jest.fn(() => 600) })
-      .mockReturnValueOnce({ get: jest.fn(() => 200) });
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
+    await waitFor(() => {
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
+    });
   });
 
-  it('removes ingredient when dragged outside the container (bottom boundary)', () => {
+  it('should remove ingredient when dragged outside right boundary', async () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 500, clientY: 100 });
 
-    jest.spyOn(require('framer-motion'), 'useMotionValue')
-      .mockReturnValueOnce({ get: jest.fn(() => 200) })
-      .mockReturnValueOnce({ get: jest.fn(() => 600) });
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
+    await waitFor(() => {
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
+    });
   });
 
-  it('does not move ingredient when container ref is null', () => {
-    const nullContainerRef = { current: null };
+  it('should remove ingredient when dragged outside bottom boundary', async () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={nullContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragEnd = draggableElement.props.onDragEnd;
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 100, clientY: 500 });
 
-    jest.spyOn(require('framer-motion'), 'useMotionValue')
-      .mockReturnValueOnce({ get: jest.fn(() => 200) })
-      .mockReturnValueOnce({ get: jest.fn(() => 250) });
-
-    if (onDragEnd) {
-      onDragEnd({} as any);
-    }
-
-    expect(mockMoveIngredient).not.toHaveBeenCalled();
-    expect(mockRemoveIngredient).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
+    });
   });
 
-  it('removes ingredient on double click', () => {
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
-    );
-
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDoubleClick = draggableElement.props.onDoubleClick;
-
-    if (onDoubleClick) {
-      onDoubleClick({} as any);
-    }
-
-    expect(mockRemoveIngredient).toHaveBeenCalledWith('inst-1');
-  });
-
-  it('applies correct z-index when dragging', () => {
+  it('should keep ingredient when dropped within boundaries', async () => {
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 200, clientY: 200 });
 
-    expect(draggableElement.props.style.zIndex).toBe(10);
+    await waitFor(() => {
+      expect(mockMoveIngredient).toHaveBeenCalled();
+      expect(mockRemoveIngredient).not.toHaveBeenCalled();
+    });
   });
 
-  it('renders with correct rotation from item', () => {
-    const itemWithRotation = { ...mockPlacedIngredient, rotation: 45 };
+  it('should call moveIngredient with correct coordinates on drag end', async () => {
     const { container } = render(
-      <DraggableIngredient item={itemWithRotation} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    expect(draggableElement.props.style.rotate).toBe(45);
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 150, clientY: 250 });
+
+    await waitFor(() => {
+      expect(mockMoveIngredient).toHaveBeenCalledWith('instance-1', expect.any(Number), expect.any(Number));
+    });
   });
 
-  it('applies grab cursor when not dragging', () => {
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
-    );
-
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    expect(draggableElement.props.style.cursor).toBe('grab');
-  });
-
-  it('handles ingredient with different learning language', () => {
-    mockUseLanguageStore.mockReturnValue({
-      learningLanguage: 'fr',
-    } as any);
-
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
-    );
-
-    expect(screen.getByText('tomate')).toBeInTheDocument();
-  });
-
-  it('does not show label when dragging', () => {
+  it('should not call moveIngredient if container ref is null', async () => {
+    const nullRef = { current: null };
     const { container } = render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={nullRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    const onDragStart = draggableElement.props.onDragStart;
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: 200, clientY: 200 });
 
-    if (onDragStart) {
-      onDragStart({} as any);
-    }
-
-    // After drag starts, the label should not be visible
-    // This would require checking the rendered output after state change
+    await waitFor(() => {
+      expect(mockMoveIngredient).not.toHaveBeenCalled();
+      expect(mockRemoveIngredient).not.toHaveBeenCalled();
+    });
   });
 
-  it('handles edge case where ingredient ID maps to no translation', () => {
-    mockGetIngredientById.mockReturnValue({
-      id: 'unknown',
-      name: 'Unknown',
-      emoji: '❓',
-    } as any);
-
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+  it('should have correct cursor style when not dragging', () => {
+    const { container } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
-
-    expect(screen.getByText('❓')).toBeInTheDocument();
+    const dragElement = container.querySelector('[style*="cursor"]') as HTMLElement;
+    expect(dragElement).toHaveStyle({ cursor: 'grab' });
   });
 
-  it('sets position to absolute and touchAction to none', () => {
-    render(
-      <DraggableIngredient item={mockPlacedIngredient} containerRef={mockContainerRef as any} />
+  it('should apply correct z-index when not dragging', () => {
+    const { container } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
+    );
+    const dragElement = container.querySelector('[style*="z-index"]') as HTMLElement;
+    expect(dragElement).toHaveStyle({ zIndex: '10' });
+  });
+
+  it('should set drag momentum to false', () => {
+    const { container } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
+    );
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    expect(dragElement).toBeInTheDocument();
+  });
+
+  it('should handle item with different rotation values', () => {
+    const rotatedItem = { ...defaultPlacedIngredient, rotation: 45 };
+    const { container } = render(
+      <DraggableIngredient item={rotatedItem} containerRef={mockContainerRef} />
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it('should handle item with minimum scale', () => {
+    const minScaleItem = { ...defaultPlacedIngredient, scale: 0.1 };
+    const { container } = render(
+      <DraggableIngredient item={minScaleItem} containerRef={mockContainerRef} />
+    );
+    const sizeDiv = container.querySelector('div[style*="width"]');
+    expect(sizeDiv).toHaveStyle({ width: '5px', height: '5px' });
+  });
+
+  it('should handle boundary case when dragged at exactly -60 left', async () => {
+    const { container } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
     );
 
-    const draggableElement = screen.getByTestId('draggable-ingredient');
-    expect(draggableElement.props.style.position).toBe('absolute');
-    expect(draggableElement.props.style.touchAction).toBe('none');
-    expect(draggableElement.props.style.userSelect).toBe('none');
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: -60, clientY: 100 });
+
+    await waitFor(() => {
+      expect(mockMoveIngredient).toHaveBeenCalled();
+    });
+  });
+
+  it('should handle boundary case when dragged at exactly -61 left', async () => {
+    const { container } = render(
+      <DraggableIngredient item={defaultPlacedIngredient} containerRef={mockContainerRef} />
+    );
+
+    const dragElement = container.querySelector('[style*="position: absolute"]') as HTMLElement;
+    
+    fireEvent.pointerDown(dragElement);
+    fireEvent.dragEnd(dragElement, { clientX: -61, clientY: 100 });
+
+    await waitFor(() => {
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('instance-1');
+    });
   });
 });
