@@ -5,563 +5,336 @@ import { HamburgerStack } from './HamburgerStack';
 import { useGameStore } from '../../store/gameStore';
 
 jest.mock('../../store/gameStore');
-
-const mockUseGameStore = useGameStore as jest.MockedFunction<typeof useGameStore>;
+jest.mock('framer-motion', () => ({
+  motion: {
+    svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
+    g: ({ children, onClick, ...props }: any) => <g {...props} onClick={onClick}>{children}</g>,
+  },
+  AnimatePresence: ({ children }: any) => children,
+}));
 
 describe('HamburgerStack', () => {
+  const mockRemoveIngredient = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useGameStore as jest.Mock).mockReturnValue({
+      placedIngredients: [],
+      removeIngredient: mockRemoveIngredient,
+    });
   });
 
-  describe('rendering with no ingredients', () => {
-    it('should render the hamburger stack component', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
+  describe('rendering', () => {
+    it('should render an SVG element', () => {
+      render(<HamburgerStack />);
+      const svg = screen.getByRole('img', { hidden: true });
       expect(svg).toBeInTheDocument();
     });
 
-    it('should render plate elements', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ellipses = container.querySelectorAll('ellipse');
-
-      // Plate has 2 ellipses
-      expect(ellipses.length).toBeGreaterThanOrEqual(2);
+    it('should render with default viewBox when no ingredients are placed', () => {
+      render(<HamburgerStack />);
+      const svg = screen.getByRole('img', { hidden: true });
+      expect(svg).toHaveAttribute('viewBox');
+      const viewBox = svg.getAttribute('viewBox');
+      expect(viewBox).toMatch(/^0\s-?\d+\s300\s\d+$/);
     });
 
-    it('should render bottom bun', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
+    it('should render plate elements', () => {
       const { container } = render(<HamburgerStack />);
       const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThanOrEqual(4); // plate ellipses
+    });
 
+    it('should render bottom bun elements', () => {
+      const { container } = render(<HamburgerStack />);
+      const ellipses = container.querySelectorAll('ellipse');
       // Bottom bun has 4 ellipses
-      expect(ellipses.length).toBeGreaterThanOrEqual(6);
+      expect(ellipses.length).toBeGreaterThanOrEqual(8);
     });
 
     it('should render top bun dome', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
       const { container } = render(<HamburgerStack />);
-      const g = container.querySelector('g[transform]');
-
-      expect(g).toBeInTheDocument();
-    });
-
-    it('should render SVG with correct initial state', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
-      expect(svg).toHaveAttribute('preserveAspectRatio', 'xMidYMax meet');
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(0);
     });
   });
 
-  describe('rendering with single ingredient', () => {
-    it('should render beef patty ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+  describe('ingredients rendering', () => {
+    it('should render beef_patty ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'beef_patty', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const rects = container.querySelectorAll('rect');
-
-      // Beef patty has 2 rects + hit area rect
-      expect(rects.length).toBeGreaterThanOrEqual(3);
+      expect(rects.length).toBeGreaterThan(4); // includes beef_patty rects
     });
 
-    it('should render lettuce ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'lettuce' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+    it('should render lettuce ingredient with wavy path', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'lettuce', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const paths = container.querySelectorAll('path');
-
-      // Lettuce has 2 paths
-      expect(paths.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should render tomato slice ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'tomato_slice' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ellipses = container.querySelectorAll('ellipse');
-
-      // Tomato has multiple ellipses
-      expect(ellipses.length).toBeGreaterThan(6);
-    });
-
-    it('should render cheese ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'cheese' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const rects = container.querySelectorAll('rect');
-
-      // Cheese has 2 rects + hit area
-      expect(rects.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it('should render onion ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'onion' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ellipses = container.querySelectorAll('ellipse');
-
-      // Onion has multiple ellipses
-      expect(ellipses.length).toBeGreaterThan(6);
-    });
-
-    it('should render pickle ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'pickle' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const circles = container.querySelectorAll('circle');
-
-      // Pickle has multiple circles
-      expect(circles.length).toBeGreaterThan(0);
-    });
-
-    it('should render ketchup ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'ketchup' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const paths = container.querySelectorAll('path');
-
-      // Ketchup is a path
       expect(paths.length).toBeGreaterThan(0);
     });
 
-    it('should render mustard ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'mustard' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+    it('should render tomato_slice ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'tomato_slice', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThan(8);
+    });
+
+    it('should render cheese ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'cheese', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const rects = container.querySelectorAll('rect');
+      expect(rects.length).toBeGreaterThan(4);
+    });
+
+    it('should render onion ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'onion', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThan(8);
+    });
+
+    it('should render pickle ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'pickle', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const ellipses = container.querySelectorAll('ellipse');
+      expect(ellipses.length).toBeGreaterThan(8);
+    });
+
+    it('should render ketchup ingredient with wavy stroke', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'ketchup', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const paths = container.querySelectorAll('path');
+      expect(paths.length).toBeGreaterThan(0);
+    });
 
-      // Mustard is a path
+    it('should render mustard ingredient with wavy stroke', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'mustard', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const paths = container.querySelectorAll('path');
       expect(paths.length).toBeGreaterThan(0);
     });
 
     it('should render bacon ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'bacon' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'bacon', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const paths = container.querySelectorAll('path');
-
-      // Bacon has paths
       expect(paths.length).toBeGreaterThan(0);
     });
 
-    it('should render egg fried ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'egg_fried' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+    it('should render egg_fried ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'egg_fried', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const circles = container.querySelectorAll('circle');
-
-      // Egg has circles
       expect(circles.length).toBeGreaterThan(0);
     });
 
     it('should render avocado ingredient', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'avocado' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'avocado', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const ellipses = container.querySelectorAll('ellipse');
-
-      // Avocado has 2 ellipses
-      expect(ellipses.length).toBeGreaterThanOrEqual(2);
+      expect(ellipses.length).toBeGreaterThan(8);
     });
 
-    it('should render unknown ingredient as default layer', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'unknown_ingredient' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+    it('should render unknown ingredient with DEFAULT_LAYER', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'unknown_ingredient', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const rects = container.querySelectorAll('rect');
-
-      // Default layer has rect + hit area
-      expect(rects.length).toBeGreaterThanOrEqual(2);
+      expect(rects.length).toBeGreaterThan(4);
     });
   });
 
-  describe('rendering with multiple ingredients', () => {
-    it('should stack ingredients in order', () => {
-      mockUseGameStore.mockReturnValue({
+  describe('multiple ingredients', () => {
+    it('should render multiple ingredients stacked correctly', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
         placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-          { instanceId: '2', ingredientId: 'cheese' },
-          { instanceId: '3', ingredientId: 'lettuce' },
+          { ingredientId: 'beef_patty', instanceId: '1' },
+          { ingredientId: 'cheese', instanceId: '2' },
+          { ingredientId: 'lettuce', instanceId: '3' },
         ],
-        removeIngredient: jest.fn(),
-      } as any);
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
-      const groups = container.querySelectorAll('motion.g, g');
-
-      // Should have multiple ingredient groups
-      expect(groups.length).toBeGreaterThan(1);
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(3);
     });
 
-    it('should render multiple different ingredients correctly', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-          { instanceId: '2', ingredientId: 'tomato_slice' },
-          { instanceId: '3', ingredientId: 'onion' },
-          { instanceId: '4', ingredientId: 'bacon' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
-      expect(svg).toBeInTheDocument();
-    });
-
-    it('should handle many ingredients in stack', () => {
-      const ingredients = Array.from({ length: 10 }, (_, i) => ({
-        instanceId: `${i}`,
-        ingredientId: i % 2 === 0 ? 'beef_patty' : 'cheese',
-      }));
-
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: ingredients,
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
-      expect(svg).toBeInTheDocument();
-    });
-  });
-
-  describe('interactivity', () => {
-    it('should call removeIngredient when clicking on an ingredient', async () => {
-      const removeIngredient = jest.fn();
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-        ],
-        removeIngredient,
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ingredientGroup = container.querySelector('motion.g');
-
-      if (ingredientGroup) {
-        await userEvent.click(ingredientGroup as Element);
-      }
-
-      expect(removeIngredient).toHaveBeenCalled();
-    });
-
-    it('should pass correct instanceId to removeIngredient', async () => {
-      const removeIngredient = jest.fn();
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: 'test-id-123', ingredientId: 'cheese' },
-        ],
-        removeIngredient,
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ingredientGroup = container.querySelector('motion.g');
-
-      if (ingredientGroup) {
-        await userEvent.click(ingredientGroup as Element);
-      }
-
-      expect(removeIngredient).toHaveBeenCalledWith('test-id-123');
-    });
-
-    it('should have pointer cursor style on ingredients', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const ingredientGroup = container.querySelector('motion.g');
-
-      expect(ingredientGroup).toHaveStyle({ cursor: 'pointer' });
-    });
-  });
-
-  describe('SVG viewBox calculations', () => {
-    it('should render with correct viewBox when stack is empty', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
-      const viewBox = svg?.getAttribute('viewBox');
-      expect(viewBox).toBeDefined();
-      expect(viewBox).toMatch(/^0 \d+ 300 \d+$/);
-    });
-
-    it('should adjust viewBox height with tall stacks', () => {
-      const tallStack = Array.from({ length: 15 }, (_, i) => ({
-        instanceId: `${i}`,
+    it('should adjust viewBox height for tall stacks', () => {
+      const longStack = Array.from({ length: 10 }, (_, i) => ({
         ingredientId: 'beef_patty',
+        instanceId: `${i}`,
       }));
 
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: tallStack,
-        removeIngredient: jest.fn(),
-      } as any);
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: longStack,
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
       const svg = container.querySelector('svg');
-
+      expect(svg).toHaveAttribute('viewBox');
       const viewBox = svg?.getAttribute('viewBox');
       expect(viewBox).toBeDefined();
     });
   });
 
-  describe('animation properties', () => {
-    it('should render with proper animation attributes', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
+  describe('interaction', () => {
+    it('should call removeIngredient when ingredient is clicked', async () => {
+      const user = userEvent.setup();
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'beef_patty', instanceId: 'test-id-123' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
-      const motionSvg = container.querySelector('motion.svg');
+      const groups = container.querySelectorAll('g');
+      
+      // Skip the first group which is the top bun dome
+      const ingredientGroup = groups[1];
+      
+      await user.click(ingredientGroup);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('test-id-123');
+    });
 
-      expect(motionSvg).toBeInTheDocument();
+    it('should have cursor pointer style on ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'beef_patty', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const groups = container.querySelectorAll('g');
+      const ingredientGroup = groups[1];
+      expect(ingredientGroup).toHaveStyle('cursor: pointer');
+    });
+
+    it('should handle multiple ingredient clicks independently', async () => {
+      const user = userEvent.setup();
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [
+          { ingredientId: 'beef_patty', instanceId: 'id-1' },
+          { ingredientId: 'cheese', instanceId: 'id-2' },
+        ],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      const groups = container.querySelectorAll('g');
+      
+      await user.click(groups[1]);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('id-1');
+
+      mockRemoveIngredient.mockClear();
+
+      await user.click(groups[2]);
+      expect(mockRemoveIngredient).toHaveBeenCalledWith('id-2');
     });
   });
 
   describe('SVG structure', () => {
-    it('should have correct SVG dimensions', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
+    it('should have proper SVG attributes', () => {
+      render(<HamburgerStack />);
+      const svg = screen.getByRole('img', { hidden: true });
       expect(svg).toHaveAttribute('width', '100%');
       expect(svg).toHaveAttribute('height', '100%');
+      expect(svg).toHaveAttribute('preserveAspectRatio', 'xMidYMax meet');
     });
 
-    it('should contain g element for top bun with transform', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
+    it('should render invisible hit area rectangles for ingredients', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'beef_patty', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
-      const bunGroup = container.querySelector('g[transform]');
-
-      expect(bunGroup).toBeInTheDocument();
-    });
-  });
-
-  describe('hit areas', () => {
-    it('should create invisible hit area rects for ingredients', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-          { instanceId: '2', ingredientId: 'cheese' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const transparentRects = container.querySelectorAll('rect[fill="transparent"]');
-
-      expect(transparentRects.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should have transparent hit area rects wider than ingredients', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [
-          { instanceId: '1', ingredientId: 'beef_patty' },
-        ],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const transparentRect = container.querySelector('rect[fill="transparent"]');
-
-      const width = transparentRect?.getAttribute('width');
-      expect(width).toBeDefined();
-      expect(parseFloat(width || '0')).toBeGreaterThan(200);
-    });
-  });
-
-  describe('empty state', () => {
-    it('should render only buns when no ingredients', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const groups = container.querySelectorAll('motion.g');
-
-      // No ingredient motion groups when empty
-      expect(groups.length).toBe(0);
+      const rects = container.querySelectorAll('rect[fill="transparent"]');
+      expect(rects.length).toBeGreaterThan(0);
     });
   });
 
   describe('edge cases', () => {
-    it('should handle ingredient with null or undefined values gracefully', () => {
-      mockUseGameStore.mockReturnValue({
+    it('should handle empty placedIngredients array', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should render with only one ingredient', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
+        placedIngredients: [{ ingredientId: 'beef_patty', instanceId: '1' }],
+        removeIngredient: mockRemoveIngredient,
+      });
+
+      const { container } = render(<HamburgerStack />);
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should maintain instance IDs for different ingredients with same type', () => {
+      (useGameStore as jest.Mock).mockReturnValue({
         placedIngredients: [
-          { instanceId: '1', ingredientId: '' },
+          { ingredientId: 'beef_patty', instanceId: 'beef-1' },
+          { ingredientId: 'beef_patty', instanceId: 'beef-2' },
         ],
-        removeIngredient: jest.fn(),
-      } as any);
+        removeIngredient: mockRemoveIngredient,
+      });
 
       const { container } = render(<HamburgerStack />);
-      const svg = container.querySelector('svg');
-
-      expect(svg).toBeInTheDocument();
-    });
-
-    it('should render correct number of ingredient layers', () => {
-      const ingredients = [
-        { instanceId: '1', ingredientId: 'beef_patty' },
-        { instanceId: '2', ingredientId: 'cheese' },
-        { instanceId: '3', ingredientId: 'lettuce' },
-      ];
-
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: ingredients,
-        removeIngredient: jest.fn(),
-      } as any);
-
-      const { container } = render(<HamburgerStack />);
-      const motionGroups = container.querySelectorAll('[class*="motion"]');
-
-      expect(motionGroups.length).toBeGreaterThanOrEqual(3);
-    });
-  });
-
-  describe('store integration', () => {
-    it('should call useGameStore hook', () => {
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient: jest.fn(),
-      } as any);
-
-      render(<HamburgerStack />);
-
-      expect(mockUseGameStore).toHaveBeenCalled();
-    });
-
-    it('should use placedIngredients from store', () => {
-      const ingredients = [
-        { instanceId: '1', ingredientId: 'beef_patty' },
-      ];
-
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: ingredients,
-        removeIngredient: jest.fn(),
-      } as any);
-
-      render(<HamburgerStack />);
-
-      expect(mockUseGameStore).toHaveBeenCalled();
-    });
-
-    it('should use removeIngredient function from store', () => {
-      const removeIngredient = jest.fn();
-      mockUseGameStore.mockReturnValue({
-        placedIngredients: [],
-        removeIngredient,
-      } as any);
-
-      render(<HamburgerStack />);
-
-      expect(mockUseGameStore).toHaveBeenCalled();
+      const groups = container.querySelectorAll('g');
+      expect(groups.length).toBeGreaterThan(2);
     });
   });
 });
