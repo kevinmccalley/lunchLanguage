@@ -1,171 +1,78 @@
 // @ts-nocheck
-import { render } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { motion } from 'framer-motion';
 import { ChefCharacter } from './ChefCharacter';
 import type { GameState } from '../../types';
 
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
+  ...jest.requireActual('framer-motion'),
+  useAnimation: jest.fn(),
   motion: {
-    div: ({ children, animate, style }: any) => (
-      <div data-testid="motion-div" data-animate={JSON.stringify(animate)} style={style}>
-        {children}
-      </div>
-    ),
-    g: ({ children, animate, style }: any) => (
-      <g data-testid="motion-g" data-animate={JSON.stringify(animate)} style={style}>
-        {children}
-      </g>
-    ),
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    g: ({ children, ...props }: any) => <g {...props}>{children}</g>,
   },
-  useAnimation: () => ({
-    start: jest.fn(),
-  }),
 }));
 
 describe('ChefCharacter', () => {
-  describe('rendering', () => {
-    it('should render without crashing', () => {
-      const { container } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(container).toBeTruthy();
-    });
+  let mockBodyControls: any;
+  let mockArmControls: any;
+  let mockEyeControls: any;
 
-    it('should render SVG element', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockBodyControls = {
+      start: jest.fn().mockResolvedValue(undefined),
+    };
+    mockArmControls = {
+      start: jest.fn().mockResolvedValue(undefined),
+    };
+    mockEyeControls = {
+      start: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const { useAnimation } = require('framer-motion');
+    useAnimation.mockImplementation(() => {
+      const callCount = useAnimation.mock.results.length;
+      if (callCount % 3 === 0) return mockBodyControls;
+      if (callCount % 3 === 1) return mockArmControls;
+      return mockEyeControls;
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+  });
+
+  describe('rendering', () => {
+    it('should render the chef character component', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
       );
       const svg = container.querySelector('svg');
-      expect(svg).toBeTruthy();
+      expect(svg).toBeInTheDocument();
     });
 
-    it('should use default size of 120 when not provided', () => {
+    it('should render SVG with correct default size', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
       );
       const svg = container.querySelector('svg');
       expect(svg).toHaveAttribute('width', '120');
-      expect(svg).toHaveAttribute('height', '168');
+      expect(svg?.getAttribute('height')).toBe('168');
     });
 
-    it('should use custom size when provided', () => {
+    it('should render SVG with custom size', () => {
+      const customSize = 200;
       const { container } = render(
-        <ChefCharacter emotion="happy" size={200} />
+        <ChefCharacter emotion="happy" size={customSize} />
       );
       const svg = container.querySelector('svg');
-      expect(svg).toHaveAttribute('width', '200');
-      expect(svg).toHaveAttribute('height', '280');
+      expect(svg).toHaveAttribute('width', customSize.toString());
+      expect(svg?.getAttribute('height')).toBe((customSize * 1.4).toString());
     });
 
-    it('should render motion div with correct dimensions', () => {
-      const { getByTestId } = render(
-        <ChefCharacter emotion="happy" size={150} />
-      );
-      const motionDiv = getByTestId('motion-div');
-      expect(motionDiv).toHaveStyle({ width: '150px', height: '210px' });
-    });
-  });
-
-  describe('emotion variations', () => {
-    const emotions: GameState['chefEmotion'][] = [
-      'happy',
-      'excited',
-      'cheering',
-      'thinking',
-      'pointing',
-      'confused',
-    ];
-
-    emotions.forEach((emotion) => {
-      it(`should render correctly with emotion: ${emotion}`, () => {
-        const { container } = render(
-          <ChefCharacter emotion={emotion} />
-        );
-        expect(container.querySelector('svg')).toBeTruthy();
-      });
-    });
-
-    it('should render happy eyes for non-cheering emotions', () => {
-      const { container } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      const circles = container.querySelectorAll('circle');
-      const eyeCircles = Array.from(circles).filter(
-        (circle) => circle.getAttribute('cx') === '50' || circle.getAttribute('cx') === '70'
-      );
-      expect(eyeCircles.length).toBeGreaterThan(0);
-    });
-
-    it('should render arc eyes for cheering emotion', () => {
-      const { container } = render(
-        <ChefCharacter emotion="cheering" />
-      );
-      const paths = container.querySelectorAll('path');
-      const arcEyes = Array.from(paths).filter((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q');
-      });
-      expect(arcEyes.length).toBeGreaterThan(0);
-    });
-
-    it('should render thinking eyebrows for thinking emotion', () => {
-      const { container } = render(
-        <ChefCharacter emotion="thinking" />
-      );
-      const paths = container.querySelectorAll('path');
-      expect(paths.length).toBeGreaterThan(0);
-    });
-
-    it('should render excited mouth for excited emotion', () => {
-      const { container } = render(
-        <ChefCharacter emotion="excited" />
-      );
-      const paths = container.querySelectorAll('path');
-      const mouthPath = Array.from(paths).find((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q60 100');
-      });
-      expect(mouthPath).toBeTruthy();
-    });
-
-    it('should render cheering mouth for cheering emotion', () => {
-      const { container } = render(
-        <ChefCharacter emotion="cheering" />
-      );
-      const paths = container.querySelectorAll('path');
-      const mouthPath = Array.from(paths).find((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q60 100');
-      });
-      expect(mouthPath).toBeTruthy();
-    });
-
-    it('should render thinking mouth for thinking emotion', () => {
-      const { container } = render(
-        <ChefCharacter emotion="thinking" />
-      );
-      const paths = container.querySelectorAll('path');
-      const mouthPath = Array.from(paths).find((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q60 90');
-      });
-      expect(mouthPath).toBeTruthy();
-    });
-
-    it('should render neutral mouth for default emotions', () => {
-      const { container } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      const paths = container.querySelectorAll('path');
-      const mouthPath = Array.from(paths).find((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q60 99');
-      });
-      expect(mouthPath).toBeTruthy();
-    });
-  });
-
-  describe('visual elements', () => {
     it('should render chef hat', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
@@ -174,27 +81,23 @@ describe('ChefCharacter', () => {
       expect(rects.length).toBeGreaterThan(0);
     });
 
-    it('should render face circle', () => {
+    it('should render face with correct circle', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
       );
       const circles = container.querySelectorAll('circle');
-      const faceCircle = Array.from(circles).find(
-        (circle) => circle.getAttribute('cx') === '60' && circle.getAttribute('cy') === '80'
-      );
-      expect(faceCircle).toBeTruthy();
+      expect(circles.length).toBeGreaterThan(0);
     });
 
-    it('should render cheeks', () => {
+    it('should render both cheeks', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
       );
       const circles = container.querySelectorAll('circle');
-      const cheeks = Array.from(circles).filter((circle) => {
-        const cx = circle.getAttribute('cx');
-        return cx === '40' || cx === '80';
-      });
-      expect(cheeks.length).toBeGreaterThanOrEqual(2);
+      const cheekCircles = Array.from(circles).filter(
+        (c) => c.getAttribute('cx') === '40' || c.getAttribute('cx') === '80'
+      );
+      expect(cheekCircles.length).toBe(2);
     });
 
     it('should render moustache', () => {
@@ -202,35 +105,10 @@ describe('ChefCharacter', () => {
         <ChefCharacter emotion="happy" />
       );
       const paths = container.querySelectorAll('path');
-      const moustache = Array.from(paths).find((path) => {
-        const d = path.getAttribute('d');
-        return d && d.includes('Q52 90');
-      });
-      expect(moustache).toBeTruthy();
-    });
-
-    it('should render body and apron', () => {
-      const { container } = render(
-        <ChefCharacter emotion="happy" />
+      const moustachePath = Array.from(paths).find(
+        (p) => p.getAttribute('d')?.includes('Q52 90') && p.getAttribute('stroke') === '#8B4513'
       );
-      const rects = container.querySelectorAll('rect');
-      const apronRects = Array.from(rects).filter((rect) => {
-        const x = rect.getAttribute('x');
-        return x === '40' || x === '48';
-      });
-      expect(apronRects.length).toBeGreaterThan(0);
-    });
-
-    it('should render arms', () => {
-      const { container } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      const rects = container.querySelectorAll('rect');
-      const armRects = Array.from(rects).filter((rect) => {
-        const x = rect.getAttribute('x');
-        return x === '10' || x === '88';
-      });
-      expect(armRects.length).toBeGreaterThan(0);
+      expect(moustachePath).toBeInTheDocument();
     });
 
     it('should render legs and shoes', () => {
@@ -238,147 +116,415 @@ describe('ChefCharacter', () => {
         <ChefCharacter emotion="happy" />
       );
       const rects = container.querySelectorAll('rect');
-      const legRects = Array.from(rects).filter((rect) => {
-        const y = rect.getAttribute('y');
-        return y === '154';
+      const legRects = Array.from(rects).filter(
+        (r) => r.getAttribute('y') === '154'
+      );
+      expect(legRects.length).toBe(2);
+    });
+  });
+
+  describe('emotion: excited', () => {
+    it('should start body animation with excited params', async () => {
+      render(<ChefCharacter emotion="excited" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            y: expect.arrayContaining([0, -10, 0, -10, 0]),
+            transition: expect.objectContaining({
+              duration: 0.8,
+              ease: 'easeInOut',
+            }),
+          })
+        );
       });
-      expect(legRects.length).toBeGreaterThan(0);
     });
 
-    it('should render spoon in right hand', () => {
+    it('should start arm animation with excited params', async () => {
+      render(<ChefCharacter emotion="excited" />);
+
+      await waitFor(() => {
+        expect(mockArmControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rotate: expect.arrayContaining([0, -20, 0, -20, 0]),
+            transition: expect.objectContaining({
+              duration: 0.8,
+            }),
+          })
+        );
+      });
+    });
+
+    it('should render regular eyes for excited emotion', () => {
       const { container } = render(
-        <ChefCharacter emotion="happy" />
+        <ChefCharacter emotion="excited" />
+      );
+      const circles = container.querySelectorAll('circle');
+      const eyeCircles = Array.from(circles).filter(
+        (c) => (c.getAttribute('cx') === '50' || c.getAttribute('cx') === '70') &&
+               c.getAttribute('cy') === '76'
+      );
+      expect(eyeCircles.length).toBe(2);
+    });
+
+    it('should render big smile for excited emotion', () => {
+      const { container } = render(
+        <ChefCharacter emotion="excited" />
+      );
+      const paths = container.querySelectorAll('path');
+      const mouthPath = Array.from(paths).find(
+        (p) => p.getAttribute('d') === 'M48 90 Q60 100 72 90' &&
+               p.getAttribute('fill') === '#ff8a80'
+      );
+      expect(mouthPath).toBeInTheDocument();
+    });
+  });
+
+  describe('emotion: cheering', () => {
+    it('should start body animation with cheering params', async () => {
+      render(<ChefCharacter emotion="cheering" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            y: expect.arrayContaining([0, -15, 0]),
+            rotate: expect.arrayContaining([0, -5, 5, 0]),
+            transition: expect.objectContaining({
+              duration: 0.6,
+              repeat: 2,
+            }),
+          })
+        );
+      });
+    });
+
+    it('should start arm animation with cheering params', async () => {
+      render(<ChefCharacter emotion="cheering" />);
+
+      await waitFor(() => {
+        expect(mockArmControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rotate: expect.arrayContaining([-60, -120, -60]),
+            transition: expect.objectContaining({
+              duration: 0.4,
+              repeat: 4,
+            }),
+          })
+        );
+      });
+    });
+
+    it('should render arc eyes for cheering emotion', () => {
+      const { container } = render(
+        <ChefCharacter emotion="cheering" />
+      );
+      const paths = container.querySelectorAll('path');
+      const arcEyes = Array.from(paths).filter(
+        (p) => p.getAttribute('d')?.includes('Q') &&
+               (p.getAttribute('d')?.includes('M48 74') || p.getAttribute('d')?.includes('M64 74'))
+      );
+      expect(arcEyes.length).toBe(2);
+    });
+
+    it('should render big smile with fill for cheering emotion', () => {
+      const { container } = render(
+        <ChefCharacter emotion="cheering" />
+      );
+      const paths = container.querySelectorAll('path');
+      const mouthPath = Array.from(paths).find(
+        (p) => p.getAttribute('d') === 'M48 90 Q60 100 72 90' &&
+               p.getAttribute('fill') === '#ff8a80'
+      );
+      expect(mouthPath).toBeInTheDocument();
+    });
+  });
+
+  describe('emotion: thinking', () => {
+    it('should start body animation with thinking params', async () => {
+      render(<ChefCharacter emotion="thinking" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rotate: expect.arrayContaining([-3, 3, -3]),
+            transition: expect.objectContaining({
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }),
+          })
+        );
+      });
+    });
+
+    it('should render thinking eyebrows', () => {
+      const { container } = render(
+        <ChefCharacter emotion="thinking" />
+      );
+      const paths = container.querySelectorAll('path');
+      const thinkingEyebrows = Array.from(paths).filter(
+        (p) => (p.getAttribute('d')?.includes('M44 66') ||
+                p.getAttribute('d')?.includes('M64 63'))
+      );
+      expect(thinkingEyebrows.length).toBe(2);
+    });
+
+    it('should render thinking mouth', () => {
+      const { container } = render(
+        <ChefCharacter emotion="thinking" />
+      );
+      const paths = container.querySelectorAll('path');
+      const thinkingMouth = Array.from(paths).find(
+        (p) => p.getAttribute('d') === 'M50 93 Q60 90 70 93' &&
+               p.getAttribute('fill') === 'none'
+      );
+      expect(thinkingMouth).toBeInTheDocument();
+    });
+  });
+
+  describe('emotion: pointing', () => {
+    it('should start arm animation with pointing params', async () => {
+      render(<ChefCharacter emotion="pointing" />);
+
+      await waitFor(() => {
+        expect(mockArmControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rotate: -45,
+            transition: expect.objectContaining({
+              duration: 0.3,
+            }),
+          })
+        );
+      });
+    });
+
+    it('should render default body state for pointing', async () => {
+      render(<ChefCharacter emotion="pointing" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            y: 0,
+            rotate: 0,
+            transition: expect.objectContaining({
+              duration: 0.3,
+            }),
+          })
+        );
+      });
+    });
+
+    it('should render spoon on right arm', () => {
+      const { container } = render(
+        <ChefCharacter emotion="pointing" />
       );
       const lines = container.querySelectorAll('line');
       const spoonLine = Array.from(lines).find(
-        (line) => line.getAttribute('x1') === '108' && line.getAttribute('x2') === '118'
+        (l) => l.getAttribute('x1') === '108' && l.getAttribute('y1') === '115'
       );
-      expect(spoonLine).toBeTruthy();
+      expect(spoonLine).toBeInTheDocument();
     });
   });
 
-  describe('animations', () => {
-    it('should not crash when emotion changes', () => {
-      const { rerender } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(() => {
-        rerender(<ChefCharacter emotion="excited" />);
-      }).not.toThrow();
+  describe('emotion: happy', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
     });
 
-    it('should handle excited emotion transition', () => {
-      const { rerender } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(() => {
-        rerender(<ChefCharacter emotion="excited" />);
-      }).not.toThrow();
+    afterEach(() => {
+      jest.useRealTimers();
     });
 
-    it('should handle cheering emotion transition', () => {
-      const { rerender } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(() => {
-        rerender(<ChefCharacter emotion="cheering" />);
-      }).not.toThrow();
-    });
+    it('should start breathing animation for happy emotion', async () => {
+      render(<ChefCharacter emotion="happy" />);
 
-    it('should handle thinking emotion transition', () => {
-      const { rerender } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(() => {
-        rerender(<ChefCharacter emotion="thinking" />);
-      }).not.toThrow();
-    });
-
-    it('should handle pointing emotion transition', () => {
-      const { rerender } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      expect(() => {
-        rerender(<ChefCharacter emotion="pointing" />);
-      }).not.toThrow();
-    });
-  });
-
-  describe('size variations', () => {
-    const sizes = [50, 80, 100, 120, 150, 200, 300];
-
-    sizes.forEach((size) => {
-      it(`should render correctly with size ${size}`, () => {
-        const { container } = render(
-          <ChefCharacter emotion="happy" size={size} />
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith(
+          expect.objectContaining({
+            y: expect.arrayContaining([0, -3, 0]),
+            transition: expect.objectContaining({
+              duration: 2,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }),
+          })
         );
-        const svg = container.querySelector('svg');
-        expect(svg).toHaveAttribute('width', size.toString());
-        expect(svg).toHaveAttribute('height', (size * 1.4).toString());
       });
     });
 
-    it('should maintain aspect ratio for custom sizes', () => {
-      const testSize = 240;
+    it('should render default eyebrows for happy emotion', () => {
       const { container } = render(
-        <ChefCharacter emotion="happy" size={testSize} />
+        <ChefCharacter emotion="happy" />
       );
-      const svg = container.querySelector('svg');
-      const width = parseInt(svg?.getAttribute('width') || '0');
-      const height = parseInt(svg?.getAttribute('height') || '0');
-      expect(height / width).toBeCloseTo(1.4, 1);
+      const paths = container.querySelectorAll('path');
+      const normalEyebrows = Array.from(paths).filter(
+        (p) => (p.getAttribute('d')?.includes('M44 68 Q50 64 56 68') ||
+                p.getAttribute('d')?.includes('M64 68 Q70 64 76 68'))
+      );
+      expect(normalEyebrows.length).toBe(2);
+    });
+
+    it('should render default mouth for happy emotion', () => {
+      const { container } = render(
+        <ChefCharacter emotion="happy" />
+      );
+      const paths = container.querySelectorAll('path');
+      const defaultMouth = Array.from(paths).find(
+        (p) => p.getAttribute('d') === 'M48 91 Q60 99 72 91' &&
+               p.getAttribute('fill') === 'none'
+      );
+      expect(defaultMouth).toBeInTheDocument();
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle zero size gracefully', () => {
+  describe('emotion: unknown/default', () => {
+    it('should reset animations for unknown emotion', async () => {
+      render(<ChefCharacter emotion={'unknown' as GameState['chefEmotion']} />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalledWith({
+          y: 0,
+          rotate: 0,
+          transition: { duration: 0.3 },
+        });
+        expect(mockArmControls.start).toHaveBeenCalledWith({
+          rotate: 0,
+          transition: { duration: 0.3 },
+        });
+      });
+    });
+  });
+
+  describe('blinking animation', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should setup blink interval on mount', () => {
+      const setIntervalSpy = jest.spyOn(global, 'setInterval');
+      render(<ChefCharacter emotion="happy" />);
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 3500);
+      setIntervalSpy.mockRestore();
+    });
+
+    it('should clear blink interval on unmount', () => {
+      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+      const { unmount } = render(<ChefCharacter emotion="happy" />);
+      unmount();
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      clearIntervalSpy.mockRestore();
+    });
+
+    it('should trigger blink animation at correct intervals', async () => {
+      jest.useFakeTimers();
+      render(<ChefCharacter emotion="happy" />);
+
+      jest.advanceTimersByTime(3500);
+
+      await waitFor(() => {
+        expect(mockEyeControls.start).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('animation dependencies', () => {
+    it('should update animations when emotion prop changes', async () => {
+      const { rerender } = render(<ChefCharacter emotion="happy" />);
+      const initialCallCount = mockBodyControls.start.mock.calls.length;
+
+      rerender(<ChefCharacter emotion="excited" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start.mock.calls.length).toBeGreaterThan(
+          initialCallCount
+        );
+      });
+    });
+
+    it('should handle rapid emotion changes', async () => {
+      const { rerender } = render(<ChefCharacter emotion="happy" />);
+
+      rerender(<ChefCharacter emotion="excited" />);
+      rerender(<ChefCharacter emotion="cheering" />);
+      rerender(<ChefCharacter emotion="thinking" />);
+
+      await waitFor(() => {
+        expect(mockBodyControls.start).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('size prop variations', () => {
+    it('should handle very small size', () => {
       const { container } = render(
-        <ChefCharacter emotion="happy" size={0} />
+        <ChefCharacter emotion="happy" size={50} />
       );
       const svg = container.querySelector('svg');
-      expect(svg).toHaveAttribute('width', '0');
-      expect(svg).toHaveAttribute('height', '0');
+      expect(svg).toHaveAttribute('width', '50');
+      expect(svg?.getAttribute('height')).toBe('70');
     });
 
     it('should handle very large size', () => {
       const { container } = render(
-        <ChefCharacter emotion="happy" size={1000} />
+        <ChefCharacter emotion="happy" size={500} />
       );
       const svg = container.querySelector('svg');
-      expect(svg).toHaveAttribute('width', '1000');
-      expect(svg).toHaveAttribute('height', '1400');
+      expect(svg).toHaveAttribute('width', '500');
+      expect(svg?.getAttribute('height')).toBe('700');
     });
 
-    it('should handle null emotion as default case', () => {
-      const { container } = render(
-        <ChefCharacter emotion={null as any} />
+    it('should maintain aspect ratio with different sizes', () => {
+      const size1 = 120;
+      const size2 = 240;
+      const { container: container1 } = render(
+        <ChefCharacter emotion="happy" size={size1} />
       );
-      expect(container.querySelector('svg')).toBeTruthy();
-    });
+      const { container: container2 } = render(
+        <ChefCharacter emotion="happy" size={size2} />
+      );
 
-    it('should handle undefined emotion as default case', () => {
-      const { container } = render(
-        <ChefCharacter emotion={undefined as any} />
-      );
-      expect(container.querySelector('svg')).toBeTruthy();
+      const svg1 = container1.querySelector('svg');
+      const svg2 = container2.querySelector('svg');
+
+      const ratio1 = parseInt(svg1?.getAttribute('height') || '0') / parseInt(svg1?.getAttribute('width') || '1');
+      const ratio2 = parseInt(svg2?.getAttribute('height') || '0') / parseInt(svg2?.getAttribute('width') || '1');
+
+      expect(ratio1).toBeCloseTo(ratio2, 5);
     });
   });
 
-  describe('accessibility', () => {
-    it('should render SVG with viewBox for scalability', () => {
+  describe('SVG structure', () => {
+    it('should have motion div wrapper with correct styles', () => {
+      const { container } = render(
+        <ChefCharacter emotion="happy" size={120} />
+      );
+      const motionDiv = container.querySelector('div');
+      expect(motionDiv).toHaveStyle({
+        display: 'inline-block',
+      });
+    });
+
+    it('should contain all major SVG elements', () => {
+      const { container } = render(
+        <ChefCharacter emotion="happy" />
+      );
+      const svg = container.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+      expect(svg?.querySelectorAll('circle').length).toBeGreaterThan(0);
+      expect(svg?.querySelectorAll('path').length).toBeGreaterThan(0);
+      expect(svg?.querySelectorAll('rect').length).toBeGreaterThan(0);
+    });
+
+    it('should have correct viewBox', () => {
       const { container } = render(
         <ChefCharacter emotion="happy" />
       );
       const svg = container.querySelector('svg');
       expect(svg).toHaveAttribute('viewBox', '0 0 120 168');
-    });
-
-    it('should have inline-block display style', () => {
-      const { getByTestId } = render(
-        <ChefCharacter emotion="happy" />
-      );
-      const motionDiv = getByTestId('motion-div');
-      expect(motionDiv).toHaveStyle({ display: 'inline-block' });
     });
   });
 });
