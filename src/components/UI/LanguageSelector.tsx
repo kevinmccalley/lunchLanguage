@@ -29,7 +29,7 @@ export const LanguageSelector = () => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = LANGUAGE_OPTIONS.find(l => l.code === language)!;
+  const current = LANGUAGE_OPTIONS.find(l => l.code === language) ?? LANGUAGE_OPTIONS[0];
   const regionLabel = REGION_LABEL[language];
 
   // Close on outside click
