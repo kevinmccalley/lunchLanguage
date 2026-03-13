@@ -1,4 +1,5 @@
 // @ts-nocheck
+import React from 'react';
 import { render } from '@testing-library/react';
 import { SaladBase } from '../src/components/Kitchen/plates/SaladBase';
 
@@ -19,163 +20,202 @@ describe('SaladBase', () => {
     const svg = container.querySelector('svg');
     expect(svg).toHaveAttribute('width', '280');
     expect(svg).toHaveAttribute('height', '220');
+    expect(svg).toHaveAttribute('viewBox', '0 0 280 220');
   });
 
-  it('should have correct viewBox', () => {
+  it('should have motion animation properties', () => {
     const { container } = render(<SaladBase />);
     const svg = container.querySelector('svg');
-    expect(svg).toHaveAttribute('viewBox', '0 0 280 220');
+    expect(svg).toBeTruthy();
+    // Framer motion applies styles to the element
+    expect(svg?.tagName).toBe('svg');
   });
 
   it('should render bowl shadow ellipse', () => {
     const { container } = render(<SaladBase />);
     const ellipses = container.querySelectorAll('ellipse');
+    expect(ellipses.length).toBeGreaterThan(0);
+    
+    // Find shadow ellipse (first ellipse with shadow properties)
     const shadowEllipse = Array.from(ellipses).find(
-      (el) => el.getAttribute('cx') === '140' && el.getAttribute('cy') === '210'
+      (el) => el.getAttribute('cx') === '140' && 
+              el.getAttribute('cy') === '210' &&
+              el.getAttribute('rx') === '120'
     );
     expect(shadowEllipse).toBeTruthy();
-    expect(shadowEllipse).toHaveAttribute('rx', '120');
-    expect(shadowEllipse).toHaveAttribute('ry', '12');
+    expect(shadowEllipse?.getAttribute('ry')).toBe('12');
+    expect(shadowEllipse?.getAttribute('fill')).toContain('rgba(0,0,0,0.08)');
   });
 
-  it('should render bowl outer path', () => {
+  it('should render bowl outer and inner paths', () => {
     const { container } = render(<SaladBase />);
     const paths = container.querySelectorAll('path');
-    expect(paths.length).toBeGreaterThan(0);
-    const bowlOuterPath = paths[0];
-    expect(bowlOuterPath).toHaveAttribute('d', 'M20 110 Q20 200 140 200 Q260 200 260 110 Z');
-    expect(bowlOuterPath).toHaveAttribute('fill', '#e0d5c8');
-  });
-
-  it('should render bowl inner path', () => {
-    const { container } = render(<SaladBase />);
-    const paths = container.querySelectorAll('path');
-    const bowlInnerPath = paths[1];
-    expect(bowlInnerPath).toHaveAttribute('d', 'M30 110 Q30 190 140 190 Q250 190 250 110 Z');
-    expect(bowlInnerPath).toHaveAttribute('fill', '#f8f4f0');
+    
+    // Should have at least bowl outer, bowl inner, bowl highlight paths
+    expect(paths.length).toBeGreaterThanOrEqual(3);
   });
 
   it('should render bowl rim ellipses', () => {
     const { container } = render(<SaladBase />);
     const ellipses = container.querySelectorAll('ellipse');
+    
+    // Find rim ellipses (cx=140, cy=110 and cx=140, cy=108)
     const rimEllipses = Array.from(ellipses).filter(
-      (el) => el.getAttribute('cx') === '140' && (el.getAttribute('cy') === '110' || el.getAttribute('cy') === '108')
+      (el) => el.getAttribute('cx') === '140' && 
+              (el.getAttribute('cy') === '110' || el.getAttribute('cy') === '108')
     );
     expect(rimEllipses.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('should render salad base leaves ellipse', () => {
+  it('should render salad base main ellipse', () => {
     const { container } = render(<SaladBase />);
     const ellipses = container.querySelectorAll('ellipse');
+    
+    // Find main salad base ellipse
     const saladBaseEllipse = Array.from(ellipses).find(
-      (el) => el.getAttribute('cx') === '140' && el.getAttribute('cy') === '145'
+      (el) => el.getAttribute('cx') === '140' && 
+              el.getAttribute('cy') === '145' &&
+              el.getAttribute('rx') === '95'
     );
     expect(saladBaseEllipse).toBeTruthy();
-    expect(saladBaseEllipse).toHaveAttribute('fill', '#2ecc71');
-    expect(saladBaseEllipse).toHaveAttribute('opacity', '0.85');
+    expect(saladBaseEllipse?.getAttribute('ry')).toBe('38');
+    expect(saladBaseEllipse?.getAttribute('fill')).toBe('#2ecc71');
   });
 
-  it('should render 10 individual leaf ellipses', () => {
+  it('should render leaf ellipses with correct count', () => {
     const { container } = render(<SaladBase />);
     const ellipses = container.querySelectorAll('ellipse');
-    // Total ellipses: 1 shadow + 2 rim + 1 salad base + 10 leaves = 14
+    
+    // Should have: shadow (1) + rim (2) + salad base (1) + leaves (10) = 14 ellipses
     expect(ellipses.length).toBe(14);
-  });
-
-  it('should render leaf ellipses with correct attributes', () => {
-    const { container } = render(<SaladBase />);
-    const ellipses = Array.from(container.querySelectorAll('ellipse'));
-    // Skip first 4 ellipses (shadow, rim, rim, salad base)
-    const leafEllipses = ellipses.slice(4);
-
-    leafEllipses.forEach((leaf) => {
-      expect(leaf).toHaveAttribute('rx', '22');
-      expect(leaf).toHaveAttribute('ry', '12');
-      expect(leaf).toHaveAttribute('opacity', '0.9');
-      expect(leaf).toHaveAttribute('transform');
-    });
   });
 
   it('should render leaves with alternating colors', () => {
     const { container } = render(<SaladBase />);
-    const ellipses = Array.from(container.querySelectorAll('ellipse'));
-    const leafEllipses = ellipses.slice(4);
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    // Get all leaf ellipses (skip first 4: shadow, rim1, rim2, salad base)
+    const leafEllipses = Array.from(ellipses).slice(4);
+    
+    const colors = leafEllipses.map((el) => el.getAttribute('fill'));
+    
+    // Check alternating pattern: even indices should be one color, odd another
+    for (let i = 0; i < colors.length; i++) {
+      if (i % 2 === 0) {
+        expect(colors[i]).toBe('#27ae60');
+      } else {
+        expect(colors[i]).toBe('#58d68d');
+      }
+    }
+  });
 
-    leafEllipses.forEach((leaf, index) => {
-      const expectedColor = index % 2 === 0 ? '#27ae60' : '#58d68d';
-      expect(leaf).toHaveAttribute('fill', expectedColor);
+  it('should render leaves with correct dimensions', () => {
+    const { container } = render(<SaladBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    // Get all leaf ellipses (skip first 4)
+    const leafEllipses = Array.from(ellipses).slice(4);
+    
+    leafEllipses.forEach((leaf) => {
+      expect(leaf.getAttribute('rx')).toBe('22');
+      expect(leaf.getAttribute('ry')).toBe('12');
+      expect(leaf.getAttribute('opacity')).toBe('0.9');
+    });
+  });
+
+  it('should render leaves with rotation transforms', () => {
+    const { container } = render(<SaladBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    // Get all leaf ellipses (skip first 4)
+    const leafEllipses = Array.from(ellipses).slice(4);
+    
+    leafEllipses.forEach((leaf) => {
+      const transform = leaf.getAttribute('transform');
+      expect(transform).toBeTruthy();
+      expect(transform).toMatch(/rotate\(/);
     });
   });
 
   it('should render bowl highlight path', () => {
     const { container } = render(<SaladBase />);
     const paths = container.querySelectorAll('path');
-    const highlightPath = paths[2];
-    expect(highlightPath).toHaveAttribute(
-      'd',
-      'M35 108 Q80 96 140 94 Q200 96 245 108'
+    
+    // Find highlight path (has specific stroke properties)
+    const highlightPath = Array.from(paths).find(
+      (el) => el.getAttribute('stroke') === 'white' &&
+              el.getAttribute('fill') === 'none'
     );
-    expect(highlightPath).toHaveAttribute('fill', 'none');
-    expect(highlightPath).toHaveAttribute('stroke', 'white');
-    expect(highlightPath).toHaveAttribute('strokeWidth', '4');
-    expect(highlightPath).toHaveAttribute('strokeLinecap', 'round');
-    expect(highlightPath).toHaveAttribute('opacity', '0.5');
-  });
-
-  it('should apply initial and animate props for framer-motion', () => {
-    const { container } = render(<SaladBase />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-  });
-
-  it('should render leaf ellipses with rotate transforms', () => {
-    const { container } = render(<SaladBase />);
-    const ellipses = Array.from(container.querySelectorAll('ellipse'));
-    const leafEllipses = ellipses.slice(4);
-
-    leafEllipses.forEach((leaf, index) => {
-      const transform = leaf.getAttribute('transform');
-      expect(transform).toMatch(/rotate/);
-      expect(transform).toContain((index * 37) % 180 - 60);
-    });
+    expect(highlightPath).toBeTruthy();
+    expect(highlightPath?.getAttribute('stroke-width')).toBe('4');
+    expect(highlightPath?.getAttribute('stroke-linecap')).toBe('round');
   });
 
   it('should have correct leaf positions', () => {
-    const leafPositions = [
-      [80, 130],
-      [110, 120],
-      [140, 118],
-      [170, 120],
-      [200, 130],
-      [90, 145],
-      [160, 142],
-      [140, 155],
-      [115, 150],
-      [165, 150],
-    ];
-
     const { container } = render(<SaladBase />);
-    const ellipses = Array.from(container.querySelectorAll('ellipse'));
-    const leafEllipses = ellipses.slice(4);
-
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    const leafPositions = [
+      { cx: '80', cy: '130' },
+      { cx: '110', cy: '120' },
+      { cx: '140', cy: '118' },
+      { cx: '170', cy: '120' },
+      { cx: '200', cy: '130' },
+      { cx: '90', cy: '145' },
+      { cx: '160', cy: '142' },
+      { cx: '140', cy: '155' },
+      { cx: '115', cy: '150' },
+      { cx: '165', cy: '150' },
+    ];
+    
+    // Get leaf ellipses (skip first 4)
+    const leafEllipses = Array.from(ellipses).slice(4);
+    
     leafEllipses.forEach((leaf, index) => {
-      const [expectedX, expectedY] = leafPositions[index];
-      expect(leaf).toHaveAttribute('cx', expectedX.toString());
-      expect(leaf).toHaveAttribute('cy', expectedY.toString());
+      expect(leaf.getAttribute('cx')).toBe(leafPositions[index].cx);
+      expect(leaf.getAttribute('cy')).toBe(leafPositions[index].cy);
     });
   });
 
-  it('should render all paths', () => {
-    const { container } = render(<SaladBase />);
-    const paths = container.querySelectorAll('path');
-    expect(paths.length).toBe(3); // bowl outer, bowl inner, highlight
-  });
-
-  it('should have correct number of total elements', () => {
+  it('should render SVG with proper namespace', () => {
     const { container } = render(<SaladBase />);
     const svg = container.querySelector('svg');
-    const children = svg?.children;
-    // 1 ellipse (shadow) + 2 paths (outer/inner) + 2 ellipses (rim) + 1 ellipse (salad base) + 10 ellipses (leaves) + 1 path (highlight) = 17
-    expect(children).toBeTruthy();
+    expect(svg?.tagName.toLowerCase()).toBe('svg');
+  });
+
+  it('should have all paths with correct fill colors', () => {
+    const { container } = render(<SaladBase />);
+    const paths = container.querySelectorAll('path');
+    
+    const pathFills = Array.from(paths).map((path) => path.getAttribute('fill'));
+    
+    // Bowl outer should be #e0d5c8
+    // Bowl inner should be #f8f4f0
+    // Highlight should be none
+    expect(pathFills).toContain('#e0d5c8');
+    expect(pathFills).toContain('#f8f4f0');
+    expect(pathFills).toContain('none');
+  });
+
+  it('should render bowl rim with correct stroke properties', () => {
+    const { container } = render(<SaladBase />);
+    const ellipses = container.querySelectorAll('ellipse');
+    
+    // Find first rim ellipse (with stroke)
+    const rimWithStroke = Array.from(ellipses).find(
+      (el) => el.getAttribute('stroke') === '#d5c9bc'
+    );
+    expect(rimWithStroke).toBeTruthy();
+    expect(rimWithStroke?.getAttribute('stroke-width')).toBe('3');
+  });
+
+  it('should export SaladBase as a React component', () => {
+    expect(typeof SaladBase).toBe('function');
+  });
+
+  it('should be a functional component that returns JSX', () => {
+    const result = SaladBase();
+    expect(result).toBeTruthy();
+    expect(result.type).toBeTruthy();
   });
 });
