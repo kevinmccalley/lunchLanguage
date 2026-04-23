@@ -8,6 +8,8 @@
  * =================================================================== */
 
 /*
- * No CSS-level fixes are applicable for the meta-viewport violation.
- * The fix is applied via JavaScript (see accessibility-overrides.js).
+ * No CSS overrides are required for the meta-viewport violation.
+ * The fix is applied via JavaScript (accessibility-overrides.js),
+ * which removes the user-scalable=no and maximum-scale=1.0 restrictions
+ * from the viewport meta tag at runtime.
  */
