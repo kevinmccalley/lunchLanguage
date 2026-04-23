@@ -7,7 +7,6 @@
  *   <link rel="stylesheet" href="/accessibility-overrides.css">
  * =================================================================== */
 
-/*
- * No CSS-level fixes are applicable for the meta-viewport violation.
- * The fix is applied via JavaScript (see accessibility-overrides.js).
+/* No CSS fixes required for this violation set.
+ * The meta-viewport fix is handled via JavaScript (DOM attribute update).
  */
