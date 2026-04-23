@@ -11,50 +11,59 @@
   'use strict';
 
   /**
-   * Fix: meta-viewport — WCAG 2.1 AA, Success Criterion 1.4.4 (Resize Text)
+   * Fix: meta-viewport — WCAG 1.4.4 (Resize Text, Level AA)
    *
-   * The existing <meta name="viewport"> tag includes `maximum-scale=1.0`
-   * and `user-scalable=no`, which prevents users from pinching to zoom or
-   * scaling text on mobile devices. This is a barrier for users with low
-   * vision who rely on browser/OS zoom to read content.
+   * The viewport meta tag currently contains:
+   *   maximum-scale=1.0, user-scalable=no
    *
-   * Fix: Remove `maximum-scale` and `user-scalable=no` from the viewport
-   * meta tag, retaining only `width=device-width, initial-scale=1.0`.
+   * These directives prevent users from pinching-to-zoom or otherwise
+   * scaling text in the browser, which is a WCAG 1.4.4 failure. The fix
+   * removes both restrictive directives while preserving the intended
+   * responsive behaviour (width=device-width, initial-scale=1.0).
+   *
+   * Selector: html > head > meta[name="viewport"]
    */
   (function fixMetaViewport() {
-    var metaViewport = document.querySelector('html > head > meta[name="viewport"]');
+    var metaViewport = document.querySelector(
+      'html > head > meta[name="viewport"]'
+    );
 
     if (!metaViewport) {
-      return; // No viewport meta tag found; nothing to fix.
+      return; // Element not found; nothing to do.
     }
 
     var currentContent = metaViewport.getAttribute('content') || '';
 
-    // Only modify if the problematic directives are present.
-    var hasMaxScale = /maximum-scale/i.test(currentContent);
-    var hasUserScalableNo = /user-scalable\s*=\s*no/i.test(currentContent);
+    // Only mutate if the problematic directives are still present,
+    // making this safe to run multiple times (idempotent).
+    var needsFix =
+      /maximum-scale\s*=\s*1(\.0)?/i.test(currentContent) ||
+      /user-scalable\s*=\s*no/i.test(currentContent);
 
-    if (!hasMaxScale && !hasUserScalableNo) {
-      return; // Already compliant; do not re-apply.
+    if (!needsFix) {
+      return;
     }
 
-    // Remove `maximum-scale=<value>` directive.
+    // Remove maximum-scale directive (any value that restricts zoom).
     var fixed = currentContent
       .replace(/,?\s*maximum-scale\s*=\s*[^,]*/gi, '')
-      // Remove `user-scalable=no` directive.
+      // Remove user-scalable=no directive.
       .replace(/,?\s*user-scalable\s*=\s*no/gi, '')
-      // Clean up any leading/trailing commas or whitespace.
+      // Clean up any leading/trailing commas or whitespace left behind.
       .replace(/^[,\s]+|[,\s]+$/g, '')
-      // Collapse multiple commas.
-      .replace(/,\s*,/g, ',');
+      // Collapse multiple consecutive commas/spaces into a single ', '.
+      .replace(/\s*,\s*,+\s*/g, ', ');
 
     metaViewport.setAttribute('content', fixed);
 
-    console.info(
-      '[AccessBridge] meta-viewport fix applied.\n' +
-      '  Before: ' + currentContent + '\n' +
-      '  After:  ' + fixed
-    );
+    // Verify and log result for QA visibility in the console.
+    if (typeof console !== 'undefined' && console.info) {
+      console.info(
+        '[AccessBridge] meta-viewport updated.\n' +
+          '  Before: ' + currentContent + '\n' +
+          '  After : ' + fixed
+      );
+    }
   })();
 
 })();
