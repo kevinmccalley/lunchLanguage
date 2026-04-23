@@ -7,6 +7,7 @@
  *   <link rel="stylesheet" href="/accessibility-overrides.css">
  * =================================================================== */
 
-/* No CSS fixes required for this violation set.
- * The meta-viewport fix is handled via JavaScript (DOM attribute update).
+/* No CSS-based fixes required for the meta-viewport violation.
+ * This violation is resolved via the JS override (removing user-scalable=no
+ * and maximum-scale=1.0 from the viewport meta tag at runtime).
  */
