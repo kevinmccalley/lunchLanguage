@@ -11,62 +11,48 @@
   'use strict';
 
   /**
-   * Fix: meta-viewport — WCAG 1.4.4 (Resize Text, Level AA)
+   * Fix: meta-viewport — WCAG 2.1 AA / 1.4.4 (Resize Text)
    *
-   * The existing viewport meta tag sets maximum-scale=1.0 and user-scalable=no,
-   * which prevents users from pinching-to-zoom or otherwise scaling text on
-   * mobile devices. This is a direct WCAG 1.4.4 violation.
+   * The existing <meta name="viewport"> tag disables user scaling via
+   * `maximum-scale=1.0` and `user-scalable=no`, which prevents users
+   * from zooming text up to 200% as required by WCAG 1.4.4.
    *
-   * Fix: Rewrite the content attribute to allow user scaling up to 5x,
-   * which satisfies WCAG 1.4.4 while retaining responsive-width behaviour.
-   *
-   * Selector: html > head > meta[name="viewport"]
+   * This fix removes those restrictions while preserving the
+   * responsive `width=device-width, initial-scale=1.0` behaviour.
    */
   (function fixMetaViewport() {
-    var viewport = document.querySelector('html > head > meta[name="viewport"]');
+    var meta = document.querySelector('html > head > meta[name="viewport"]');
 
-    if (!viewport) {
-      // No viewport meta found — create a compliant one.
-      viewport = document.createElement('meta');
-      viewport.setAttribute('name', 'viewport');
-      document.head.appendChild(viewport);
+    if (!meta) {
+      // No viewport meta found — nothing to fix.
+      return;
     }
 
-    var current = viewport.getAttribute('content') || '';
+    var currentContent = meta.getAttribute('content') || '';
 
-    // Check whether the current content already allows scaling.
-    // We look for the two known blocking directives.
-    var hasUserScalableNo = /user-scalable\s*=\s*no/i.test(current);
-    var hasMaxScaleOne    = /maximum-scale\s*=\s*1(\.0+)?(?=[,\s]|$)/i.test(current);
+    // Check whether the problematic directives are present.
+    var hasMaxScale   = /maximum-scale\s*=\s*[01](\.0)?/i.test(currentContent);
+    var hasUserScalable = /user-scalable\s*=\s*(no|0)/i.test(currentContent);
 
-    if (!hasUserScalableNo && !hasMaxScaleOne) {
-      // Already compliant — nothing to do.
+    if (!hasMaxScale && !hasUserScalable) {
+      // Already compliant — do not mutate.
       return;
     }
 
     // Build a compliant content string:
-    //   1. Start from the existing value so we preserve width= and initial-scale=.
-    //   2. Remove the offending directives.
-    //   3. Ensure maximum-scale=5 is present (allows generous zoom per WCAG).
-    //   4. Ensure user-scalable=yes is present.
-    var updated = current
-      // Remove user-scalable=no (and any surrounding comma/whitespace)
-      .replace(/,?\s*user-scalable\s*=\s*no/gi, '')
-      // Remove maximum-scale=1 or maximum-scale=1.0 (and any surrounding comma/whitespace)
-      .replace(/,?\s*maximum-scale\s*=\s*1(\.0+)?(?=[,\s]|$)/gi, '')
-      // Clean up any leading/trailing commas or extra spaces left behind
+    //   - Keep width=device-width and initial-scale=1.0
+    //   - Remove maximum-scale and user-scalable restrictions
+    var newContent = currentContent
+      // Remove maximum-scale=... (any value that restricts zoom)
+      .replace(/,?\s*maximum-scale\s*=\s*[^,]*/gi, '')
+      // Remove user-scalable=no or user-scalable=0
+      .replace(/,?\s*user-scalable\s*=\s*(no|0)/gi, '')
+      // Clean up any leading/trailing commas or whitespace
       .replace(/^[,\s]+|[,\s]+$/g, '')
-      .replace(/,\s*,/g, ',');
+      // Collapse multiple commas
+      .replace(/,\s*,+/g, ',');
 
-    // Append compliant directives if not already present after cleanup.
-    if (!/maximum-scale/i.test(updated)) {
-      updated += ', maximum-scale=5';
-    }
-    if (!/user-scalable/i.test(updated)) {
-      updated += ', user-scalable=yes';
-    }
-
-    viewport.setAttribute('content', updated);
+    meta.setAttribute('content', newContent);
   })();
 
 })();
