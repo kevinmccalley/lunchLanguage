@@ -1,0 +1,31 @@
+name: TestPilot Coverage Check
+on:
+  push:
+    branches: ['testpilot/**']
+permissions:
+  contents: read
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install
+      - run: |
+          npm install --no-save jest ts-jest @types/jest
+          test -f jest.config.js || test -f jest.config.ts || test -f jest.config.mjs || test -f jest.config.cjs || test -f jest.config.json || node -e "process.exit(require('./package.json').jest?0:1)" 2>/dev/null || printf '%s' '{"transform":{"^.+\\.tsx?$":["ts-jest",{"diagnostics":false}]},"testEnvironment":"node"}' > jest.config.json
+      - id: run-tests
+        run: npx jest --coverage --coverageReporters=json-summary --coverageReporters=json --passWithNoTests --forceExit
+        continue-on-error: true
+      - run: |
+          mkdir -p coverage
+          printf '%s' "${{ steps.run-tests.outcome }}" > coverage/testpilot-outcome.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testpilot-coverage
+          path: coverage/
+          retention-days: 1
